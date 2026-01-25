@@ -9,11 +9,11 @@ export default function Footer() {
           <div>
             <img 
               src="/assets/images/logo.png" 
-              alt="NLR Poker AI Logo" 
+              alt="Nash Point - AI Poker Training" 
               className="h-12 w-auto mb-4"
             />
             <p className="text-brand-text-secondary text-sm">
-              AI-enhanced poker training that learns your opponents.
+              Where game theory meets human irrationality.
             </p>
           </div>
 
@@ -61,7 +61,7 @@ export default function Footer() {
 
         <div className="mt-12 pt-8 border-t border-brand-surface text-center">
           <p className="text-brand-text-secondary text-sm">
-            © {new Date().getFullYear()} PokerAI. All rights reserved.
+            © {new Date().getFullYear()} Nash Point. All rights reserved.
           </p>
         </div>
       </div>

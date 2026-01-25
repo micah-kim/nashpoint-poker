@@ -16,20 +16,20 @@ export default function ComparisonSection() {
           <div className="bg-gradient-to-br from-brand-accent/20 to-brand-surface p-8 rounded-lg border-2 border-brand-accent">
             <div className="flex items-center mb-6">
               <div className="bg-brand-accent text-brand-primary px-4 py-2 rounded-full font-bold text-sm">
-                PokerAI
+                Nash Point
               </div>
             </div>
             <ul className="space-y-4">
               <li className="flex items-start">
                 <span className="text-brand-accent mr-3 text-xl">✓</span>
                 <span className="text-brand-text-primary">
-                  <strong>Opponent modeling</strong> - Adapts to player types
+                  <strong>Nash Equilibrium foundation</strong> - GTO as your baseline
                 </span>
               </li>
               <li className="flex items-start">
                 <span className="text-brand-accent mr-3 text-xl">✓</span>
                 <span className="text-brand-text-primary">
-                  <strong>Exploitative strategies</strong> - Learn when to deviate
+                  <strong>Exploit irrationality</strong> - Profit from human tendencies
                 </span>
               </li>
               <li className="flex items-start">
@@ -47,7 +47,7 @@ export default function ComparisonSection() {
               <li className="flex items-start">
                 <span className="text-brand-accent mr-3 text-xl">✓</span>
                 <span className="text-brand-text-primary">
-                  <strong>Randomized training</strong> - Real-world scenarios
+                  <strong>Opponent modeling</strong> - Adaptive strategies
                 </span>
               </li>
             </ul>

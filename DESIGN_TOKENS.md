@@ -1,6 +1,6 @@
 
 # DESIGN_TOKENS.md
-These are the authoritative design tokens for the POC web app.  
+These are the authoritative design tokens for Nash Point.  
 Copilot: ALWAYS reference this file before changing any styling.
 
 ---
@@ -13,6 +13,12 @@ Accent Dark (navy): `#1B3A57`
 Surface: `#1A2332`  
 Text Primary: `#F0F4F8`  
 Text Secondary: `#B0BEC5`
+
+**Brand Philosophy:**
+The navy and cyan colors represent the duality of Nash Point:
+- Navy (stable, foundational) = Nash Equilibrium / GTO principles
+- Cyan (dynamic, adaptive) = Exploiting human irrationality
+- The shattering particle effect in the logo = Breaking rigid theory for practical profit
 
 ---
 
@@ -39,7 +45,7 @@ When the user asks to “change a color everywhere” — update tokens in `tail
 
 # ▶ Logo
 Primary logo: `/assets/images/logo.png`  
-The logo features "NLR" letters in dark blue (#1B3A57) and bright blue (#00A5E0) with a shattering/particle effect.
+The NLR logo features letters in navy blue (#1B3A57) and cyan blue (#00A5E0) with a shattering/particle effect, symbolizing how Nash Point breaks rigid GTO theory to adapt to human irrationality.
 
 Logo is used in:
 1. `Navbar.tsx` (height: h-10)
@@ -47,5 +53,16 @@ Logo is used in:
 
 When updating logo:
 1. Replace file at `public/assets/images/logo.png`
-2. Maintain aspect ratio in components
-3. Ensure sizing remains consistent
+2. Maintain the "shattering" visual metaphor
+3. Keep aspect ratio consistent in components
+
+---
+
+# ▶ Brand Name: Nash Point
+
+**Inspired by John Nash:**
+- Nash Equilibrium = Foundation of GTO poker
+- Nash's understanding of human irrationality = Our exploitative edge
+- "Point" = The optimal decision point between theory and reality
+
+**Tagline:** "Where game theory meets human irrationality"

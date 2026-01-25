@@ -1,14 +1,21 @@
-# AI Poker Training - POC Website
+# Nash Point - AI Poker Training
 
-A production-ready marketing website for a next-generation No-Limit Hold'em training tool. Built with Next.js, React, and Tailwind CSS.
+A production-ready marketing website for Nash Point, an AI poker training tool inspired by John Nash. Built with Next.js, React, and Tailwind CSS.
 
 ## 🎯 Project Overview
 
-This is a proof-of-concept landing site that:
-- Introduces the AI poker training product concept
-- Explains competitive advantages vs GTO Wizard
-- Shows mockups of in-app features
+Nash Point is a proof-of-concept landing site that:
+- Introduces Nash Point - where Nash Equilibrium meets human irrationality
+- Explains how we combine GTO principles with exploitative play
+- Shows mockups of the training tool features
 - Collects user emails for early access waitlist
+
+### The Nash Point Philosophy
+
+Inspired by John Nash, who revolutionized game theory while understanding human irrationality, Nash Point teaches:
+1. **Nash Equilibrium** - Master GTO as your foundation
+2. **Human Irrationality** - Learn to exploit imperfect opponents
+3. **Maximum Profit** - Combine perfect theory with real-world application
 
 ## 🚀 Tech Stack
 
@@ -111,7 +118,7 @@ All design tokens are defined in:
 ## 🔌 API Routes
 
 ### POST `/api/waitlist`
-Stores waitlist signups in memory (POC only).
+Stores waitlist signups in Neon Postgres database.
 
 **Request:**
 ```json
@@ -130,7 +137,9 @@ Stores waitlist signups in memory (POC only).
 ```
 
 ### GET `/api/waitlist`
-Returns current waitlist count and entries (for debugging).
+Returns current waitlist count and entries from database (for debugging).
+
+**Database:** Neon Postgres with `@neondatabase/serverless` driver
 
 ## 🚢 Deployment
 
@@ -167,10 +176,24 @@ npm run lint
 
 ## 📝 Notes
 
-- Waitlist data is stored in-memory (resets on server restart)
-- For production, integrate a real database or email service
+- Waitlist data is stored in **Neon Postgres** database
+- Uses `@neondatabase/serverless` driver for serverless deployment
 - All mockups are non-functional placeholders
 - Mobile-first responsive design
+
+## 🗄️ Database Setup
+
+The project uses Neon Postgres for waitlist storage.
+
+**Schema:** See `schema.sql` for the database table structure.
+
+**Environment Variable Required:**
+- `DATABASE_URL` - Neon Postgres connection string (stored in `.env.local`)
+
+**To set up the database:**
+1. Create a Neon database (connected via Vercel Storage)
+2. Run the SQL in `schema.sql` using Neon SQL Editor
+3. Add `DATABASE_URL` to `.env.local` and Vercel environment variables
 
 ## 📚 Documentation
 
@@ -191,4 +214,6 @@ Private project - All rights reserved
 
 ---
 
-Built with ♠️ by the PokerAI team
+Built with ♠️ by the Nash Point team
+
+*"The best way to win is to understand both the perfect strategy and why your opponents will never play it perfectly."* - Inspired by John Nash

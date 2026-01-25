@@ -10,8 +10,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'AI Poker Training - Learn to Play Like a Pro',
-  description: 'AI-enhanced poker training that learns your opponents. Not just GTO. Strategy that adapts.',
+  title: 'Nash Point - AI Poker Training',
+  description: 'AI poker training inspired by John Nash. Master GTO principles while exploiting human irrationality.',
 }
 
 export default function RootLayout({

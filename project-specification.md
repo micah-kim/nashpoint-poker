@@ -72,11 +72,8 @@ Visitors must immediately understand:
 - Optional notes/suggestions textarea  
 - Submit button  
 - Success screen  
-- Store form submissions using a simple storage method (choose one):
-  - Local JSON file (dev only) OR  
-  - Fake in‑memory store OR  
-  - POST to an API route that logs to server console  
-  (Do **not** build production‑grade auth or a database)
+- **Storage:** Neon Postgres database with `@neondatabase/serverless` driver
+- Features: duplicate prevention, timestamps, persistent storage
 
 ### 4. UI Demo Page (`/demo`)
 This is NOT functional.  

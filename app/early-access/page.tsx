@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import WaitlistForm from '@/components/WaitlistForm'
 
 export const metadata: Metadata = {
-  title: 'Early Access - AI Poker Training',
-  description: 'Join the waitlist for early access to our AI-enhanced poker training tool.',
+  title: 'Early Access - Nash Point',
+  description: 'Join the waitlist for early access to Nash Point - where game theory meets human irrationality.',
 }
 
 export default function EarlyAccessPage() {
@@ -14,10 +14,10 @@ export default function EarlyAccessPage() {
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl font-bold text-brand-text-primary mb-6">
-              Get Early Access
+              Join the Nash Point Waitlist
             </h1>
             <p className="text-xl text-brand-text-secondary mb-4">
-              Be among the first to train with AI-enhanced poker strategy
+              Be among the first to master equilibrium and exploit irrationality
             </p>
             <p className="text-brand-text-secondary">
               Join our waitlist and we&apos;ll notify you when we launch. 

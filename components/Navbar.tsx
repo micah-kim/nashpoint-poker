@@ -21,7 +21,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center space-x-2">
             <img 
               src="/assets/images/logo.png" 
-              alt="NLR Poker AI Logo" 
+              alt="Nash Point - AI Poker Training" 
               className="h-10 w-auto"
             />
           </Link>

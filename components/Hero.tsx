@@ -7,13 +7,14 @@ export default function Hero() {
         <div className="max-w-4xl mx-auto text-center">
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-brand-text-primary mb-6 tracking-tight">
-            AI-Enhanced Poker Training That{' '}
-            <span className="text-brand-accent">Learns Your Opponents</span>
+            Master the <span className="text-brand-accent">Nash Equilibrium</span>
+            <br />
+            Exploit Human <span className="text-brand-accent">Irrationality</span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-xl sm:text-2xl text-brand-text-secondary mb-8 font-light">
-            Not just GTO. Strategy that adapts.
+            Inspired by John Nash: Where perfect game theory meets imperfect opponents.
           </p>
 
           {/* CTA Button */}

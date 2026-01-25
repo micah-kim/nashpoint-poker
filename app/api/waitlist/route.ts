@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// In-memory storage for waitlist (for POC only)
-const waitlist: Array<{ email: string; notes: string; timestamp: string }> = []
+import { neon } from '@neondatabase/serverless'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,27 +14,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for duplicate
-    const existingEntry = waitlist.find(entry => entry.email.toLowerCase() === email.toLowerCase())
-    if (existingEntry) {
+    // Connect to Neon database
+    const sql = neon(process.env.DATABASE_URL!)
+
+    // Check for duplicate email
+    const existingUser = await sql`
+      SELECT email FROM waitlist WHERE LOWER(email) = LOWER(${email})
+    `
+
+    if (existingUser.length > 0) {
       return NextResponse.json(
         { error: 'This email is already on the waitlist' },
         { status: 400 }
       )
     }
 
-    // Store the entry
-    const entry = {
+    // Insert new waitlist entry
+    await sql`
+      INSERT INTO waitlist (email, notes) VALUES (${email.toLowerCase().trim()}, ${notes?.trim() || ''})
+    `
+
+    // Log to console
+    console.log('📧 New Waitlist Signup:', {
       email: email.toLowerCase().trim(),
       notes: notes?.trim() || '',
       timestamp: new Date().toISOString(),
-    }
-
-    waitlist.push(entry)
-
-    // Log to console (for POC)
-    console.log('📧 New Waitlist Signup:', entry)
-    console.log(`Total waitlist count: ${waitlist.length}`)
+    })
 
     return NextResponse.json(
       { 
@@ -54,10 +57,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Optional: GET endpoint to view waitlist (for development/debugging)
+// GET endpoint to view waitlist (for development/debugging)
 export async function GET() {
-  return NextResponse.json({
-    count: waitlist.length,
-    entries: waitlist,
-  })
+  try {
+    const sql = neon(process.env.DATABASE_URL!)
+    
+    const entries = await sql`
+      SELECT id, email, notes, created_at FROM waitlist ORDER BY created_at DESC
+    `
+    
+    return NextResponse.json({
+      count: entries.length,
+      entries: entries,
+    })
+  } catch (error) {
+    console.error('Error fetching waitlist:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch waitlist' },
+      { status: 500 }
+    )
+  }
 }

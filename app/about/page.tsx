@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'About - AI Poker Training',
-  description: 'Learn about our vision for the future of poker training and how we integrate TexasSolver technology.',
+  title: 'About Nash Point - AI Poker Training',
+  description: 'Learn about Nash Point, inspired by John Nash\'s equilibrium theory and his understanding of human irrationality.',
 }
 
 export default function AboutPage() {
@@ -12,12 +12,38 @@ export default function AboutPage() {
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl sm:text-5xl font-bold text-brand-text-primary mb-6">
-            The Future of Poker Training
+            Inspired by John Nash
           </h1>
           <p className="text-xl text-brand-text-secondary">
-            We&apos;re building a smarter way to learn poker
+            Where Nash Equilibrium meets human irrationality
           </p>
         </div>
+
+        {/* Nash Point Origin */}
+        <section className="mb-16">
+          <div className="bg-gradient-to-br from-brand-accent/20 to-brand-surface p-8 rounded-lg border border-brand-accent">
+            <h2 className="text-2xl font-bold text-brand-accent mb-4">
+              Why &quot;Nash Point&quot;?
+            </h2>
+            <div className="space-y-4 text-brand-text-secondary">
+              <p>
+                John Nash revolutionized game theory with the <strong className="text-brand-text-primary">Nash Equilibrium</strong> - 
+                the foundation of GTO (Game Theory Optimal) poker strategy.
+              </p>
+              <p>
+                But Nash also understood something profound: <strong className="text-brand-text-primary">humans are inherently irrational</strong>. 
+                His own struggles with schizophrenia gave him unique insight into the gap between theoretical perfection and human reality.
+              </p>
+              <p>
+                <strong className="text-brand-text-primary">Nash Point</strong> embodies this duality. We teach you GTO principles as your 
+                foundation, then show you how to exploit the inevitable irrationality of your opponents.
+              </p>
+              <p className="text-brand-accent italic">
+                Perfect theory. Imperfect opponents. Maximum profit.
+              </p>
+            </div>
+          </div>
+        </section>
 
         {/* The Problem */}
         <section className="mb-16">
