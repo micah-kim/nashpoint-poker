@@ -118,17 +118,17 @@ export default function DemoPage() {
               </h2>
               <div className="space-y-4 text-brand-text-secondary">
                 <p>
-                  With <span className="text-brand-accent font-semibold">AK on Ks-Qh-7d</span>, you've flopped top pair with top kicker from the button in a single-raised pot.
+                  With <span className="text-brand-accent font-semibold">AK on Ks-Qh-7d</span>, you&apos;ve flopped top pair with top kicker from the button in a single-raised pot.
                 </p>
                 <p>
                   Against a <span className="text-brand-accent font-semibold">TAG opponent</span>, this is a clear value betting situation. TAG players will call with worse kings, pocket pairs, and some straight draws.
                 </p>
                 <div className="bg-brand-primary p-4 rounded-md border-l-4 border-brand-accent">
                   <p className="font-semibold text-brand-text-primary mb-2">Recommended Action:</p>
-                  <p>Bet 60-75% pot for value and protection. You're way ahead of their calling range but need to charge draws.</p>
+                  <p>Bet 60-75% pot for value and protection. You&apos;re way ahead of their calling range but need to charge draws.</p>
                 </div>
                 <p>
-                  Note: Against a passive fish, you could bet larger (80-100% pot) since they'll call with any pair or draw. Against LAG, consider checking to induce bluffs.
+                  Note: Against a passive fish, you could bet larger (80-100% pot) since they&apos;ll call with any pair or draw. Against LAG, consider checking to induce bluffs.
                 </p>
               </div>
             </div>

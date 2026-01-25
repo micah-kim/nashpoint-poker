@@ -20,7 +20,7 @@ export default function EarlyAccessPage() {
               Be among the first to train with AI-enhanced poker strategy
             </p>
             <p className="text-brand-text-secondary">
-              Join our waitlist and we'll notify you when we launch. 
+              Join our waitlist and we&apos;ll notify you when we launch. 
               Early access members will get exclusive benefits and pricing.
             </p>
           </div>
@@ -67,7 +67,7 @@ export default function EarlyAccessPage() {
           <div className="mt-8 text-center">
             <p className="text-sm text-brand-text-secondary">
               We respect your privacy. Your email will only be used to notify you about product updates. 
-              We'll never share your information with third parties.
+              We&apos;ll never share your information with third parties.
             </p>
           </div>
         </div>

@@ -35,7 +35,7 @@ export default function ComparisonSection() {
               <li className="flex items-start">
                 <span className="text-brand-accent mr-3 text-xl">✓</span>
                 <span className="text-brand-text-primary">
-                  <strong>AI explanations</strong> - Understand the "why"
+                  <strong>AI explanations</strong> - Understand the &quot;why&quot;
                 </span>
               </li>
               <li className="flex items-start">

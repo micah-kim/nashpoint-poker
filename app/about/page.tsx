@@ -15,7 +15,7 @@ export default function AboutPage() {
             The Future of Poker Training
           </h1>
           <p className="text-xl text-brand-text-secondary">
-            We're building a smarter way to learn poker
+            We&apos;re building a smarter way to learn poker
           </p>
         </div>
 
@@ -31,11 +31,11 @@ export default function AboutPage() {
                 They show you how to play against perfectly balanced opponents who never make mistakes.
               </p>
               <p>
-                But here's the reality: <strong className="text-brand-text-primary">your opponents aren't perfect</strong>.
+                But here&apos;s the reality: <strong className="text-brand-text-primary">your opponents aren&apos;t perfect</strong>.
               </p>
               <p>
                 They over-fold to aggression. They call too wide. They have exploitable tendencies. 
-                And if you're only playing pure GTO, you're leaving money on the table.
+                And if you&apos;re only playing pure GTO, you&apos;re leaving money on the table.
               </p>
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function AboutPage() {
                 Explanation-Driven
               </h3>
               <p className="text-brand-text-secondary">
-                Don't just memorize charts. Understand why each decision is optimal 
+                Don&apos;t just memorize charts. Understand why each decision is optimal 
                 with AI-powered explanations of the strategic concepts.
               </p>
             </div>
@@ -162,7 +162,7 @@ export default function AboutPage() {
               </p>
               <p>
                 When you input a scenario, we use TexasSolver to calculate the game-theory optimal baseline strategy. 
-                Then, our AI layer analyzes how to adjust that strategy based on the opponent type you're facing.
+                Then, our AI layer analyzes how to adjust that strategy based on the opponent type you&apos;re facing.
               </p>
               <p>
                 This gives you the best of both worlds: <strong className="text-brand-text-primary">GTO accuracy</strong> combined with <strong className="text-brand-text-primary">exploitative adjustments</strong>.

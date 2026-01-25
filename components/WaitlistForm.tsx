@@ -44,7 +44,7 @@ export default function WaitlistForm() {
       {status === 'success' ? (
         <div className="text-center">
           <div className="text-5xl mb-4">🎉</div>
-          <h3 className="text-2xl font-bold text-brand-accent mb-4">You're on the list!</h3>
+          <h3 className="text-2xl font-bold text-brand-accent mb-4">You&apos;re on the list!</h3>
           <p className="text-brand-text-secondary mb-6">{message}</p>
           <button
             onClick={() => {
