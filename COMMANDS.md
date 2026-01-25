@@ -51,7 +51,7 @@ curl http://localhost:3000/api/waitlist
 
 ## 📦 Deployment Commands
 
-### Deploy to Vercel (CLI)
+### Deploy to Vercel (CLI) 
 ```bash
 # Install Vercel CLI globally
 npm install -g vercel
