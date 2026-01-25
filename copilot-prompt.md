@@ -1,5 +1,5 @@
 
-You are GitHub Copilot. Use the contents of `project-specification.md`, `ui-wireframes.md`, and `system-architecture.md` to generate a complete, production‑ready Next.js + React + TailwindCSS marketing website for the POC poker training tool.
+You are GitHub Copilot. Use the contents of all `.md` files to generate a complete, production‑ready Next.js + React + TailwindCSS marketing website for the POC poker training tool.
 
 Follow these rules:
 - Use the App Router (`app/` directory)

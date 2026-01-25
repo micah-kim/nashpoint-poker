@@ -5,23 +5,25 @@ Copilot: ALWAYS reference this file before changing any styling.
 
 ---
 
-# ▶ Brand Color Palette (Warm, Minimal, Masculine)
-Primary (charcoal): `#1A1A1A`  
-Background: `#121212`  
-Accent (warm gold): `#C48F56`  
-Surface: `#1E1E1E`  
-Text Primary: `#F1EEE8`  
-Text Secondary: `#C7C2BA`
+# ▶ Brand Color Palette (Modern, Tech, Professional)
+Primary (navy blue): `#1B3A57`  
+Background: `#0F1419`  
+Accent (cyan blue): `#00A5E0`  
+Accent Dark (navy): `#1B3A57`  
+Surface: `#1A2332`  
+Text Primary: `#F0F4F8`  
+Text Secondary: `#B0BEC5`
 
 ---
 
 # ▶ Tailwind Tokens (must match tailwind.config.js)
-brand-primary: #1A1A1A
-brand-bg: #121212
-brand-accent: #C48F56
-brand-surface: #1E1E1E
-brand-text-primary: #F1EEE8
-brand-text-secondary: #C7C2BA
+brand-primary: #1B3A57
+brand-bg: #0F1419
+brand-accent: #00A5E0
+brand-accent-dark: #1B3A57
+brand-surface: #1A2332
+brand-text-primary: #F0F4F8
+brand-text-secondary: #B0BEC5
 
 Copilot:  
 When the user asks to “change a color everywhere” — update tokens in `tailwind.config.js` AND reference this file.
@@ -36,12 +38,14 @@ When the user asks to “change a color everywhere” — update tokens in `tail
 ---
 
 # ▶ Logo
-Primary logo: `/public/assets/logo.svg`  
-Dark-mode: `/public/assets/logo-dark.svg`
+Primary logo: `/assets/images/logo.png`  
+The logo features "NLR" letters in dark blue (#1B3A57) and bright blue (#00A5E0) with a shattering/particle effect.
+
+Logo is used in:
+1. `Navbar.tsx` (height: h-10)
+2. `Footer.tsx` (height: h-12)
 
 When updating logo:
-1. Overwrite these files
-2. Update usage in:
-   - `Navbar.tsx`
-   - `/app/layout.tsx`
-3. Ensure sizing remains consistent (h-8 or h-10)
+1. Replace file at `public/assets/images/logo.png`
+2. Maintain aspect ratio in components
+3. Ensure sizing remains consistent

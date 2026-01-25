@@ -16,10 +16,11 @@ It is a high‑quality landing site, showing what the full tool will become.
 
 ## Brand Identity
 - Minimalist
-- Elegant, warm, masculine  
+- Modern, tech-forward, professional  
 - Avoid clutter
 - Feel modern & premium  
-- Color scheme: deep charcoal, warm neutrals, gold/copper accents
+- Color scheme: navy blue (#1B3A57), dark backgrounds, cyan blue accents (#00A5E0)
+- Inspired by NLR logo with shattering particle effect
 
 ---
 
