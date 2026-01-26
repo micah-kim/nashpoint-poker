@@ -16,8 +16,8 @@ const features: Feature[] = [
     icon: '🧠',
   },
   {
-    title: 'TexasSolver-Backed Accuracy',
-    description: 'Built on industry-standard solver technology with free API integration. Get proven, accurate solutions.',
+    title: 'Solver-Backed Accuracy',
+    description: 'Built on industry-standard GTO solver technology. Get proven, mathematically accurate solutions.',
     icon: '🔬',
   },
   {

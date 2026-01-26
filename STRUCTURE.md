@@ -66,7 +66,7 @@ ai-gto-poc-website/
 #### `app/layout.tsx`
 - Root layout component
 - Wraps all pages
-- Includes Navbar and Footer
+- Includes LoadingScreen, Navbar and Footer
 - Sets up global metadata
 - Configures Inter font
 
@@ -85,7 +85,7 @@ ai-gto-poc-website/
 - Vision and approach
 - Problem statement
 - Product roadmap
-- TexasSolver integration info
+- Solver integration info
 
 #### `app/demo/page.tsx`
 - Non-functional UI mockup

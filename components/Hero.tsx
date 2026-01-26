@@ -14,7 +14,7 @@ export default function Hero() {
 
           {/* Subheadline */}
           <p className="text-xl sm:text-2xl text-brand-text-secondary mb-8 font-light">
-            Inspired by John Nash: Where perfect game theory meets imperfect opponents.
+            Where perfect game theory meets imperfect opponents.
           </p>
 
           {/* CTA Button */}

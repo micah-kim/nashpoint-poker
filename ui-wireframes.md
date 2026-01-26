@@ -10,7 +10,7 @@
 
 [FEATURE GRID]
 - Card 1: “Opponent‑Aware Strategies”
-- Card 2: “TexasSolver‑Backed Accuracy”
+- Card 2: "Solver‑Backed Accuracy"
 - Card 3: “Explain‑the‑Why Training”
 - Card 4: “Real‑World Scenario Analysis”
 

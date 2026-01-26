@@ -100,7 +100,7 @@ All design tokens are defined in:
 - Problem statement
 - Our approach (4 key differentiators)
 - Product roadmap
-- TexasSolver integration explanation
+- Solver integration explanation
 
 ### Demo Page (`/demo`)
 - Non-functional UI mockup
@@ -206,7 +206,6 @@ Additional documentation:
 ## 🔗 References
 
 - [GTO Wizard](https://gtowizard.com) - Competitive reference
-- [TexasSolver](https://github.com/bupticybee/TexasSolver) - Open-source GTO solver
 
 ## 📄 License
 

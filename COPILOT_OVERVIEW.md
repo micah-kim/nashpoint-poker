@@ -16,7 +16,7 @@ The POC does:
 - Collect email + optional notes
 
 The POC does NOT implement:
-- TexasSolver integration
+- GTO solver integration
 - Full solver AI
 - Full authentication
 - Training mode
@@ -104,6 +104,7 @@ This ensures the repo remains self‑documenting and maintainable.
 /ComparisonSection.tsx
 /MockupPanel.tsx
 /WaitlistForm.tsx
+/LoadingScreen.tsx
 /cards, buttons, layout subcomponents...
 /lib
 validators.ts

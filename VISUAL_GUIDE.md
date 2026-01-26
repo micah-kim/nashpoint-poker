@@ -29,7 +29,7 @@
 │                                                           │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
 │  │    🎯    │  │    🔬    │  │    💡    │  │    🎲    │ │
-│  │ Opponent │  │TexasSolver│  │ Explain  │  │Real-World│ │
+│  │ Opponent │  │  Solver  │  │ Explain  │  │Real-World│ │
 │  │  Aware   │  │  Backed  │  │the-Why   │  │ Scenario │ │ ← Feature Grid
 │  │          │  │          │  │ Training │  │ Analysis │ │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘ │
@@ -103,9 +103,9 @@
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  How TexasSolver Integration Works                       │
+│  How Our Solver Integration Works                        │
 │                                                           │
-│  TexasSolver provides GTO baseline →                    │
+│  GTO solver provides baseline strategy →                │
 │  AI layer adjusts for opponent type →                   │
 │  You get best of both worlds!                           │
 └─────────────────────────────────────────────────────────┘

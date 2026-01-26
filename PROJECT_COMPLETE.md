@@ -25,7 +25,7 @@ All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully com
    - Problem statement
    - Solution approach (4 differentiators)
    - Product roadmap
-   - TexasSolver integration explanation
+   - Solver integration explanation
    - CTA to waitlist
 
 3. **Demo Page** (`/demo`)
@@ -42,7 +42,7 @@ All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully com
    - Benefits list
    - Privacy notice
 
-### ✅ Components (6 total)
+### ✅ Components (7 total)
 
 - `Navbar` - Sticky navigation with mobile menu
 - `Footer` - Links and branding
@@ -50,6 +50,7 @@ All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully com
 - `FeatureSection` - 4-card feature grid
 - `ComparisonSection` - Side-by-side comparison
 - `WaitlistForm` - Email capture with validation
+- `LoadingScreen` - Animated logo splash on first visit
 
 ### ✅ API Routes
 

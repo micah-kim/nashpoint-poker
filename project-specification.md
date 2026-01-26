@@ -31,7 +31,7 @@ Visitors must immediately understand:
 1. Opponent‑type aware strategy analysis  
 2. Not strictly GTO — intelligent deviations based on opponent profiles  
 3. Explanation‑driven training (not just charts)  
-4. Integration with free API‑based solvers (TexasSolver)
+4. Integration with open-source GTO solver technology
 
 ---
 
@@ -58,14 +58,14 @@ Visitors must immediately understand:
 - Feature previews:
   - Scenario input + feedback
   - Randomized training vs opponent types
-  - Solver‑backed evaluation using TexasSolver
+  - Solver‑backed evaluation using GTO solver engine
   - Explain‑the‑why engine
 
 ### 2. About / Vision Page (`/about`)
 - The problem with current solvers  
 - Why the training method is different  
 - Future roadmap  
-- How TexasSolver integrates (non‑technical explanation)
+- How solver integration works (non‑technical explanation)
 
 ### 3. Early Access Page (`/early-access`)
 - Email input  
@@ -111,12 +111,6 @@ Use for inspiration (NOT copying):
 
 GTO Wizard  
 https://gtowizard.com
-
-TexasSolver GitHub repo  
-https://github.com/bupticybee/TexasSolver
-
-TexasSolver README  
-https://github.com/bupticybee/TexasSolver/blob/master/README.md
 
 ---
 

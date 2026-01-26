@@ -19,17 +19,18 @@ Navigate to: http://localhost:3000
 
 ### Pages (4 total)
 - ✅ `/` - Landing page with hero, features, and comparison
-- ✅ `/about` - Vision, approach, roadmap, TexasSolver info
+- ✅ `/about` - Vision, approach, roadmap, solver integration info
 - ✅ `/demo` - Non-functional UI mockup of the training tool
 - ✅ `/early-access` - Waitlist signup form
 
-### Components (6 total)
+### Components (7 total)
 - ✅ `Navbar` - Responsive navigation with mobile menu
 - ✅ `Footer` - Links and branding
 - ✅ `Hero` - Main headline with CTA buttons
 - ✅ `FeatureSection` - 4-card feature grid
 - ✅ `ComparisonSection` - Side-by-side comparison with GTO Wizard
 - ✅ `WaitlistForm` - Email capture with success state
+- ✅ `LoadingScreen` - Animated logo splash on first visit
 
 ### API Routes
 - ✅ `POST /api/waitlist` - Stores email signups (in-memory)

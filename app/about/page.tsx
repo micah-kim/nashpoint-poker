@@ -101,7 +101,7 @@ export default function AboutPage() {
                 Solver-Backed
               </h3>
               <p className="text-brand-text-secondary">
-                Powered by TexasSolver, an open-source GTO solver. Get accurate, 
+                Powered by open-source GTO solver technology. Get accurate, 
                 reliable solutions without expensive subscriptions.
               </p>
             </div>
@@ -134,7 +134,7 @@ export default function AboutPage() {
                   Phase 1: Core Training Engine
                 </h3>
                 <p className="text-brand-text-secondary">
-                  Hand input, opponent type selection, AI commentary, and TexasSolver integration
+                  Hand input, opponent type selection, AI commentary, and GTO solver integration
                 </p>
               </div>
             </div>
@@ -169,25 +169,18 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* TexasSolver Integration */}
+        {/* Solver Integration */}
         <section className="mb-16">
           <div className="bg-gradient-to-br from-brand-accent/20 to-brand-surface p-8 rounded-lg border border-brand-accent">
             <h2 className="text-2xl font-bold text-brand-text-primary mb-4">
-              How TexasSolver Integration Works
+              How Our Solver Integration Works
             </h2>
             <div className="space-y-4 text-brand-text-secondary">
               <p>
-                <a 
-                  href="https://github.com/bupticybee/TexasSolver" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-brand-accent hover:underline"
-                >
-                  TexasSolver
-                </a> is an open-source GTO solver that provides the mathematical foundation for our training recommendations.
+                We leverage open-source GTO solver technology that provides the mathematical foundation for our training recommendations.
               </p>
               <p>
-                When you input a scenario, we use TexasSolver to calculate the game-theory optimal baseline strategy. 
+                When you input a scenario, we calculate the game-theory optimal baseline strategy. 
                 Then, our AI layer analyzes how to adjust that strategy based on the opponent type you&apos;re facing.
               </p>
               <p>

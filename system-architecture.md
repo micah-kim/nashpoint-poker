@@ -7,7 +7,7 @@ This document describes the design for the full poker‑training tool.
 1. Scenario input by user  
 2. AI commentary explaining decisions  
 3. Opponent modeling (TAG, LAG, passive, micro‑stakes reg, etc.)  
-4. Solver integration with TexasSolver  
+4. Integration with GTO solver engine  
 5. Training mode (random scenarios)  
 6. Deviations from pure GTO based on opponent tendencies  
 
@@ -24,7 +24,7 @@ This document describes the design for the full poker‑training tool.
 
 ### Backend
 - Node or Python service  
-- TexasSolver integration via REST or local exec  
+- GTO solver integration via REST or local exec  
 - Metadata store for scenarios  
 - User profile + preferences  
 

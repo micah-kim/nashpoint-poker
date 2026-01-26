@@ -41,7 +41,7 @@ export default function ComparisonSection() {
               <li className="flex items-start">
                 <span className="text-brand-accent mr-3 text-xl">✓</span>
                 <span className="text-brand-text-primary">
-                  <strong>Free solver integration</strong> - TexasSolver API
+                  <strong>Open-source solver engine</strong> - GTO accuracy without expensive subscriptions
                 </span>
               </li>
               <li className="flex items-start">
