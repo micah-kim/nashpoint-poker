@@ -4,62 +4,98 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  [Logo: PokerAI]    Home | About | Demo | Early Access │ ← Sticky Navbar
+│  [Logo: Nash Point]  Home | About | Demo | Early Access │ ← Sticky Navbar
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│                                                           │
-│    AI-Enhanced Poker Training That                       │
-│    Learns Your Opponents                                 │
-│                                                           │
-│    Not just GTO. Strategy that adapts.                   │
-│                                                           │
-│    [Join the Waitlist]  [See Demo]                       │
-│                                                           │
-│    ┌───────────────────────────────────────┐             │
-│    │                                       │             │
-│    │    [Tool Mockup Preview]              │             │ ← Hero Section
-│    │                                       │             │
-│    └───────────────────────────────────────┘             │
-│                                                           │
+│                  🚀 The First of Its Kind               │ ← Badge
+│                                                         │
+│    The First Poker Trainer That                         │
+│    Blends GTO + Exploits                                │
+│                                                         │
+│    Stop memorizing charts. Start understanding decisions│
+│                                                         │
+│    [Join the Waitlist]  [See What's Coming]             │
+│                                                         │
+│    ┌──────────┐  ┌──────────┐  ┌──────────┐             │
+│    │ 🔍 Hand  │  │ 🎮 Game  │  │ ❓ Spot  │              │ ← Tool Previews
+│    │ Review   │  │ Simulate │  │ Quizzes  │             │
+│    └──────────┘  └──────────┘  └──────────┘             │
+│                                                         │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│    Why This Training Tool is Different                   │
-│                                                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
-│  │    🎯    │  │    🔬    │  │    💡    │  │    🎲    │ │
-│  │ Opponent │  │  Solver  │  │ Explain  │  │Real-World│ │
-│  │  Aware   │  │  Backed  │  │the-Why   │  │ Scenario │ │ ← Feature Grid
-│  │          │  │          │  │ Training │  │ Analysis │ │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘ │
+│    What You'll Be Able to Do                            │
+│                                                         │
+│  (Animated mockups - trigger on scroll into view)       │
+│                                                         │
+│  ┌─────────────────────┐  ┌─────────────────────────┐  │
+│  │ 🔍 HAND REVIEW      │  │ ┌─────────────────────┐ │  │
+│  │                     │  │ │ Hand: A♠ K♠        │ │  │
+│  │ • Input hand details│  │ │ Board: Q♥ J♠ 10♦  │ │  │
+│  │ • Specify opponents │  │ │ Opponent: TAG      │ │  │
+│  │ • Get AI feedback   │  │ │ AI: [typing...]    │ │  │ ← Typing animation
+│  │ • Decision rating   │  │ │ Rating: 8.5/10    │ │  │
+│  └─────────────────────┘  │ └─────────────────────┘ │  │
+│                           └─────────────────────────┘  │
+│                                                         │
+│  ┌─────────────────────────┐  ┌─────────────────────┐  │
+│  │ ┌─────────────────────┐ │  │ 🎮 GAME SIMULATION │  │
+│  │ │    [Poker Table]    │ │  │                     │  │
+│  │ │  TAG    LAG   Fish  │ │  │ • 4 player types    │  │ ← Static display
+│  │ │      [Pot: $247]    │ │  │ • Realistic table   │  │
+│  │ │        YOU          │ │  │ • Action buttons    │  │
+│  │ │   [K♣] [Q♥]        │ │  │ • Track progress    │  │
+│  │ └─────────────────────┘ │  └─────────────────────┘  │
+│  └─────────────────────────┘                           │
+│                                                         │
+│  ┌─────────────────────┐  ┌─────────────────────────┐  │
+│  │ ❓ SPOT QUIZZES     │  │ ┌─────────────────────┐ │  │
+│  │                     │  │ │ "TAG opens UTG..."  │ │  │
+│  │ • Quick scenarios   │  │ │ You have: A♠ Q♦    │ │  │
+│  │ • Multiple choice   │  │ │ [Submit] → ✓ Correct│ │  │ ← Submit animation
+│  │ • Instant feedback  │  │ │ Feedback appears    │ │  │
+│  │ • Track accuracy    │  │ │ Progress: 60%       │ │  │
+│  └─────────────────────┘  │ └─────────────────────┘ │  │
+│                           └─────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│    How We Compare to GTO Wizard                          │
-│                                                           │
-│  ┌────────────────────┐    ┌────────────────────┐       │
-│  │   [PokerAI] ✨     │    │  [GTO Wizard]      │       │
-│  │                    │    │                    │       │
-│  │ ✓ Opponent model   │    │ ○ Balanced only    │       │
-│  │ ✓ Exploitative     │    │ ○ Pure GTO         │       │ ← Comparison
-│  │ ✓ AI explanations  │    │ ○ Charts only      │       │
-│  │ ✓ Free solver      │    │ ○ Paid solver      │       │
-│  │ ✓ Random training  │    │ ○ Pre-computed     │       │
-│  └────────────────────┘    └────────────────────┘       │
+│    Why Nash Point is Different                          │
+│                                                         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐│
+│  │    ⚖️    │  │    🧠    │  │    🔬    │  │    💡    ││
+│  │  Nash    │  │ Exploit  │  │  Solver  │  │    AI    ││
+│  │Equilib.  │  │Irrational│  │  Backed  │  │ Insights ││ ← Feature Grid
+│  │Foundation│  │   ity    │  │ Accuracy │  │          ││
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘│
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  [PokerAI Logo]                                          │
-│  AI-enhanced poker training                              │
-│                                                           │
-│  Navigation          Get Updates                         │ ← Footer
-│  • Home              Join our waitlist                   │
-│  • About             [Join Waitlist]                     │
-│  • Demo                                                  │
-│  • Early Access                                          │
-│                                                           │
-│  © 2026 PokerAI. All rights reserved.                    │
+│    How We Compare to GTO Wizard                         │
+│                                                         │
+│  ┌────────────────────┐    ┌────────────────────┐      │
+│  │   [Nash Point] ✨   │    │  [GTO Wizard]      │      │
+│  │                    │    │                    │      │
+│  │ ✓ GTO + Exploits   │    │ ○ GTO only         │      │
+│  │ ✓ AI explanations  │    │ ○ Charts only      │      │ ← Comparison
+│  │ ✓ Hand review      │    │ ○ Limited review   │      │
+│  │ ✓ Game simulation  │    │ ○ No simulation    │      │
+│  │ ✓ Quizzes          │    │ ○ Basic quizzes    │      │
+│  └────────────────────┘    └────────────────────┘      │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  [Nash Point Logo]                                      │
+│  AI-enhanced poker training                             │
+│                                                         │
+│  Navigation          Get Updates                        │ ← Footer
+│  • Home              Join our waitlist                  │
+│  • About             [Join Waitlist]                    │
+│  • Demo                                                 │
+│  • Early Access                                         │
+│                                                         │
+│  © 2026 Nash Point. All rights reserved.                │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -69,50 +105,50 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│              The Future of Poker Training                │
-│        We're building a smarter way to learn poker       │
+│              The Future of Poker Training               │
+│        We're building a smarter way to learn poker      │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  The Problem with Current Solvers                        │
-│                                                           │
-│  Traditional GTO solvers show perfect play...            │
-│  But your opponents aren't perfect!                      │
+│  The Problem with Current Solvers                       │
+│                                                         │
+│  Traditional GTO solvers show perfect play...           │
+│  But your opponents aren't perfect!                     │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  Why Our Training Method is Different                    │
-│                                                           │
-│  ┌─────────────┐  ┌─────────────┐                       │
-│  │ 🎯 Opponent │  │ 💡 Explain- │                       │
-│  │  Modeling   │  │   Driven    │                       │
-│  └─────────────┘  └─────────────┘                       │
-│                                                           │
-│  ┌─────────────┐  ┌─────────────┐                       │
-│  │ 🔬 Solver-  │  │ 🎲 Randomize│                       │
-│  │   Backed    │  │   Training  │                       │
-│  └─────────────┘  └─────────────┘                       │
+│  Why Our Training Method is Different                   │
+│                                                         │
+│  ┌─────────────┐  ┌─────────────┐                      │
+│  │ 🎯 Opponent │  │ 💡 Explain- │                      │
+│  │  Modeling   │  │   Driven    │                      │
+│  └─────────────┘  └─────────────┘                      │
+│                                                         │
+│  ┌─────────────┐  ┌─────────────┐                      │
+│  │ 🔬 Solver-  │  │ 🎲 Randomize│                      │
+│  │   Backed    │  │   Training  │                      │
+│  └─────────────┘  └─────────────┘                      │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  Product Roadmap                                         │
-│                                                           │
-│  ① Phase 1: Core Training Engine                        │
-│  ② Phase 2: Training Modes                              │
-│  ③ Phase 3: Advanced Features                           │
+│  Product Roadmap                                        │
+│                                                         │
+│  ① Phase 1: Core Training Engine                       │
+│  ② Phase 2: Training Modes                             │
+│  ③ Phase 3: Advanced Features                          │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  How Our Solver Integration Works                        │
-│                                                           │
+│  How Our Solver Integration Works                       │
+│                                                         │
 │  GTO solver provides baseline strategy →                │
 │  AI layer adjusts for opponent type →                   │
 │  You get best of both worlds!                           │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  Be Part of the Beta                                     │
-│  [Join the Waitlist]                                     │
+│  Be Part of the Beta                                    │
+│  [Join the Waitlist]                                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -122,9 +158,9 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      UI Demo                             │
-│  Preview of what the full training tool will look like   │
-│  ⚠️ This is a non-functional mockup                      │
+│                      UI Demo                            │
+│  Preview of what the full training tool will look like  │
+│  ⚠️ This is a non-functional mockup                     │
 └─────────────────────────────────────────────────────────┘
 
 ┌──────────────┬──────────────────────────────────────────┐
@@ -161,8 +197,8 @@
 └──────────────┴──────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  Want to use the real tool?                              │
-│  [Join the Waitlist]                                     │
+│  Want to use the real tool?                             │
+│  [Join the Waitlist]                                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -172,46 +208,46 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   Get Early Access                       │
-│  Be among the first to train with AI-enhanced strategy   │
-│                                                           │
-│  Join our waitlist and we'll notify you when we launch   │
+│                   Get Early Access                      │
+│  Be among the first to train with AI-enhanced strategy  │
+│                                                         │
+│  Join our waitlist and we'll notify you when we launch  │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  Early Access Benefits                                   │
-│  ✓ First access to the training platform                │
-│  ✓ Special launch pricing                               │
-│  ✓ Direct input on feature development                  │
-│  ✓ Priority support                                     │
+│  Early Access Benefits                                  │
+│  ✓ First access to the training platform               │
+│  ✓ Discount launch pricing                             │
+│  ✓ Direct input on feature development                 │
+│  ✓ Priority support                                    │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│  Join the Waitlist                                       │
-│                                                           │
-│  Email Address *                                         │
-│  ┌─────────────────────────────────────┐                │
-│  │ you@example.com                     │                │
-│  └─────────────────────────────────────┘                │
-│                                                           │
-│  Notes / Suggestions (optional)                          │
-│  ┌─────────────────────────────────────┐                │
-│  │ What features are you most          │                │
-│  │ interested in?                      │                │
-│  │                                     │                │
-│  └─────────────────────────────────────┘                │
-│                                                           │
-│  [Join Waitlist]                                         │
+│  Join the Waitlist                                      │
+│                                                         │
+│  Email Address *                                        │
+│  ┌─────────────────────────────────────┐               │
+│  │ you@example.com                     │               │
+│  └─────────────────────────────────────┘               │
+│                                                         │
+│  Notes / Suggestions (optional)                         │
+│  ┌─────────────────────────────────────┐               │
+│  │ What features are you most          │               │
+│  │ interested in?                      │               │
+│  │                                     │               │
+│  └─────────────────────────────────────┘               │
+│                                                         │
+│  [Join Waitlist]                                        │
 └─────────────────────────────────────────────────────────┘
 
              (After successful submission)
 
 ┌─────────────────────────────────────────────────────────┐
-│                       🎉                                 │
-│              You're on the list!                         │
-│  Successfully joined the waitlist!                       │
-│                                                           │
-│  Join another email →                                    │
+│                       🎉                                │
+│              You're on the list!                        │
+│  Successfully joined the waitlist!                      │
+│                                                         │
+│  Join another email →                                   │
 └─────────────────────────────────────────────────────────┘
 ```
 

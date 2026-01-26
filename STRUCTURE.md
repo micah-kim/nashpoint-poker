@@ -33,9 +33,11 @@ ai-gto-poc-website/
 ├── 🧩 Components
 │   ├── Navbar.tsx                # Navigation bar (sticky, responsive)
 │   ├── Footer.tsx                # Footer with links
-│   ├── Hero.tsx                  # Hero section for landing page
+│   ├── Hero.tsx                  # Hero section with value prop
+│   ├── ToolsSection.tsx          # Tool mockups (Hand Review, Simulation, Quizzes)
 │   ├── FeatureSection.tsx        # 4-card feature grid
 │   ├── ComparisonSection.tsx     # vs GTO Wizard comparison
+│   ├── LoadingScreen.tsx         # Animated loading splash
 │   └── WaitlistForm.tsx          # Email capture form
 │
 ├── 📚 Documentation
@@ -123,11 +125,19 @@ ai-gto-poc-website/
 - Copyright notice
 
 #### `components/Hero.tsx`
-- Large headline
-- Subheadline
-- CTA buttons
-- Mockup preview placeholder
+- Clear value proposition headline
+- Badge highlighting uniqueness
+- CTA buttons (Join Waitlist, See What's Coming)
+- Three preview cards for tools
 - Gradient decorations
+
+#### `components/ToolsSection.tsx`
+- Three tool showcases with interactive mockups
+- Hand Review: Typing animation for AI analysis, rating appears after (scroll-triggered)
+- Game Simulation: Static poker table mockup with 4 player types (TAG, LAG, Fish, YOU)
+- Spot Quizzes: Submit animation with feedback appearing (scroll-triggered)
+- Intersection Observer triggers animations on scroll for Hand Review and Quizzes
+- Alternating layout for visual interest
 
 #### `components/FeatureSection.tsx`
 - 4-card feature grid

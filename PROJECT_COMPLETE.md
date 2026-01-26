@@ -16,7 +16,8 @@ All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully com
 ### ✅ Pages (4 total)
 
 1. **Landing Page** (`/`)
-   - Hero section with headline and CTAs
+   - Hero section with clear value proposition
+   - Tools section with mockups (Hand Review, Game Simulation, Quizzes)
    - Feature grid (4 cards)
    - Comparison section vs GTO Wizard
    - Responsive design
@@ -42,11 +43,12 @@ All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully com
    - Benefits list
    - Privacy notice
 
-### ✅ Components (7 total)
+### ✅ Components (8 total)
 
 - `Navbar` - Sticky navigation with mobile menu
 - `Footer` - Links and branding
-- `Hero` - Main hero section
+- `Hero` - Clear value proposition with tool preview cards
+- `ToolsSection` - Animated mockups for Hand Review, Game Simulation, Quizzes (scroll-triggered)
 - `FeatureSection` - 4-card feature grid
 - `ComparisonSection` - Side-by-side comparison
 - `WaitlistForm` - Email capture with validation

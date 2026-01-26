@@ -4,12 +4,30 @@
 This document describes the design for the full poker‑training tool.
 
 ## Core Capabilities
-1. Scenario input by user  
-2. AI commentary explaining decisions  
-3. Opponent modeling (TAG, LAG, passive, micro‑stakes reg, etc.)  
-4. Integration with GTO solver engine  
-5. Training mode (random scenarios)  
-6. Deviations from pure GTO based on opponent tendencies  
+
+### Tool 1: Hand Review
+- User inputs hand details (cards, board, positions, action)
+- Specify opponent types (TAG, LAG, fish, nit, etc.)
+- AI provides decision rating with GTO + exploitative analysis
+- Clear, actionable feedback for improvement
+
+### Tool 2: Game Simulation
+- Configure virtual table with AI opponent profiles
+- Play realistic multi-hand sessions
+- Post-session analysis of key hands
+- Track progress with metrics (BB/100, VPIP, etc.)
+
+### Tool 3: Spot Quizzes
+- Scenario-based multiple choice questions
+- Instant feedback with reasoning
+- Track accuracy and identify weak spots
+- Quick practice format
+
+### Core AI Features
+1. Integration with GTO solver engine
+2. AI commentary explaining decisions
+3. Opponent modeling (TAG, LAG, passive, micro‑stakes reg, etc.)
+4. Deviations from pure GTO based on opponent tendencies  
 
 ---
 

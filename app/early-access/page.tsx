@@ -40,7 +40,7 @@ export default function EarlyAccessPage() {
               <li className="flex items-start">
                 <span className="text-brand-accent mr-3">✓</span>
                 <span className="text-brand-text-secondary">
-                  Special launch pricing
+                  Discount launch pricing
                 </span>
               </li>
               <li className="flex items-start">

@@ -18,15 +18,16 @@ Navigate to: http://localhost:3000
 ## ✅ What's Been Built
 
 ### Pages (4 total)
-- ✅ `/` - Landing page with hero, features, and comparison
+- ✅ `/` - Landing page with hero, tools showcase, features, and comparison
 - ✅ `/about` - Vision, approach, roadmap, solver integration info
 - ✅ `/demo` - Non-functional UI mockup of the training tool
 - ✅ `/early-access` - Waitlist signup form
 
-### Components (7 total)
+### Components (8 total)
 - ✅ `Navbar` - Responsive navigation with mobile menu
 - ✅ `Footer` - Links and branding
-- ✅ `Hero` - Main headline with CTA buttons
+- ✅ `Hero` - Clear value prop with tool preview cards
+- ✅ `ToolsSection` - Animated mockups with scroll-triggered demos
 - ✅ `FeatureSection` - 4-card feature grid
 - ✅ `ComparisonSection` - Side-by-side comparison with GTO Wizard
 - ✅ `WaitlistForm` - Email capture with success state

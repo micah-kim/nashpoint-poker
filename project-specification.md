@@ -56,10 +56,10 @@ Visitors must immediately understand:
 - CTA: “Join the Waitlist”  
 - Sub‑section describing how this tool differs from GTO Wizard  
 - Feature previews:
-  - Scenario input + feedback
-  - Randomized training vs opponent types
-  - Solver‑backed evaluation using GTO solver engine
-  - Explain‑the‑why engine
+  - Hand Review tool mockup
+  - Game Simulation tool mockup
+  - Spot Quiz tool mockup
+  - Clear explanation of GTO + exploitative combination
 
 ### 2. About / Vision Page (`/about`)
 - The problem with current solvers  

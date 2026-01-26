@@ -4,18 +4,19 @@ A production-ready marketing website for Nash Point, an AI poker training tool i
 
 ## 🎯 Project Overview
 
-Nash Point is a proof-of-concept landing site that:
-- Introduces Nash Point - where Nash Equilibrium meets human irrationality
+Nash Point is the **first poker training tool that seamlessly combines GTO and exploitative strategies using AI**.
+
+This proof-of-concept landing site:
+- Introduces Nash Point and its unique approach
+- Showcases the three core tools: Hand Review, Game Simulation, and Quizzes
 - Explains how we combine GTO principles with exploitative play
-- Shows mockups of the training tool features
 - Collects user emails for early access waitlist
 
-### The Nash Point Philosophy
+### The Three Core Tools
 
-Inspired by John Nash, who revolutionized game theory while understanding human irrationality, Nash Point teaches:
-1. **Nash Equilibrium** - Master GTO as your foundation
-2. **Human Irrationality** - Learn to exploit imperfect opponents
-3. **Maximum Profit** - Combine perfect theory with real-world application
+1. **Hand Review** - Input any hand you played, describe your opponents, and get AI-powered feedback combining GTO analysis with exploitative insights
+2. **Game Simulation** - Configure virtual tables with different player types and play realistic sessions with post-game analysis
+3. **Spot Quizzes** - Quick scenario-based training to sharpen decision-making with instant feedback
 
 ## 🚀 Tech Stack
 
@@ -91,10 +92,10 @@ All design tokens are defined in:
 ## 📄 Pages
 
 ### Landing Page (`/`)
-- Hero section with headline and CTA
-- Feature grid (4 key features)
+- Hero section with clear value proposition and tool previews
+- Tools section with interactive mockups (Hand Review, Game Simulation, Quizzes)
+- Feature grid (4 key differentiators)
 - Comparison with GTO Wizard
-- Mockup preview
 
 ### About Page (`/about`)
 - Problem statement

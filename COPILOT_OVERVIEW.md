@@ -100,6 +100,7 @@ This ensures the repo remains self‑documenting and maintainable.
 /Navbar.tsx
 /Footer.tsx
 /Hero.tsx
+/ToolsSection.tsx
 /FeatureSection.tsx
 /ComparisonSection.tsx
 /MockupPanel.tsx
