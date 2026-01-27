@@ -197,7 +197,24 @@ npm run lint
 - All mockups are non-functional placeholders
 - Mobile-first responsive design
 
-## 🗄️ Database Setup
+## � SEO
+
+The site includes comprehensive SEO optimizations:
+
+- **robots.txt** - Dynamic via `app/robots.ts`
+- **sitemap.xml** - Dynamic via `app/sitemap.ts`
+- **Open Graph tags** - For social sharing (Facebook, LinkedIn)
+- **Twitter Card tags** - For Twitter/X sharing
+- **JSON-LD structured data** - SoftwareApplication schema for rich snippets
+- **Canonical URLs** - Prevent duplicate content issues
+- **Meta keywords** - Poker training related terms
+
+**Environment Variable:**
+- `NEXT_PUBLIC_BASE_URL` - Your production URL (default: `https://nashpoint.ai`)
+
+**Note:** Create an OG image at `public/assets/images/og-image.png` (1200x630px) for social sharing previews.
+
+## �🗄️ Database Setup
 
 The project uses Neon Postgres for waitlist storage.
 

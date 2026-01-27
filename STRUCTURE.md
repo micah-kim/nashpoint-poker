@@ -13,9 +13,11 @@ nashpoint-poker/
 │   └── .gitignore                # Git ignore rules
 │
 ├── 📱 App Directory (Next.js App Router)
-│   ├── layout.tsx                # Root layout (Navbar + Footer wrapper)
+│   ├── layout.tsx                # Root layout (Navbar + Footer + SEO)
 │   ├── page.tsx                  # Landing page (/)
 │   ├── globals.css               # Global styles
+│   ├── robots.ts                 # Dynamic robots.txt for SEO
+│   ├── sitemap.ts                # Dynamic sitemap.xml for SEO
 │   │
 │   ├── about/
 │   │   └── page.tsx              # About page (/about)
@@ -38,6 +40,8 @@ nashpoint-poker/
 │   ├── FeatureSection.tsx        # 4-card feature grid
 │   ├── ComparisonSection.tsx     # vs GTO Wizard comparison
 │   ├── WaitlistForm.tsx          # Email capture form
+│   ├── DemoContent.tsx           # Demo page client component
+│   ├── JsonLd.tsx                # JSON-LD structured data for SEO
 │   │
 │   ├── ui/                       # Shared UI primitives
 │   │   ├── index.ts              # Export barrel

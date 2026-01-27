@@ -3,8 +3,12 @@ import { Button, Card, SectionHeading, Icon } from '@/components/ui'
 import { aboutContent, approachFeatures, roadmap } from '@/lib/content'
 
 export const metadata: Metadata = {
-  title: 'About Nash Point - AI Poker Training',
-  description: 'Learn about Nash Point, inspired by John Nash\'s equilibrium theory and his understanding of human irrationality.',
+  title: 'About - Inspired by John Nash',
+  description: 'Learn how Nash Point combines John Nash\'s equilibrium theory with exploitative poker strategy. Master GTO principles while learning to profit from human irrationality.',
+  openGraph: {
+    title: 'About Nash Point - Where Game Theory Meets Poker',
+    description: 'Inspired by John Nash\'s equilibrium theory and understanding of human irrationality.',
+  },
 }
 
 export default function AboutPage() {

@@ -5,8 +5,12 @@ import { earlyAccessContent, earlyAccessBenefits } from '@/lib/content'
 import { Check } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Early Access - Nash Point',
-  description: 'Join the waitlist for early access to Nash Point - where game theory meets human irrationality.',
+  title: 'Early Access - Join the Waitlist',
+  description: 'Join the Nash Point waitlist for early access to AI-powered poker training. Get first access, launch pricing, and direct input on features.',
+  openGraph: {
+    title: 'Join Nash Point Waitlist - Early Access',
+    description: 'Be among the first to master GTO + exploitative poker strategy with AI.',
+  },
 }
 
 export default function EarlyAccessPage() {
