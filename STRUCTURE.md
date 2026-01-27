@@ -1,7 +1,7 @@
 # 📁 Project Structure
 
 ```
-ai-gto-poc-website/
+nashpoint-poker/
 │
 ├── 📄 Configuration Files
 │   ├── package.json              # Dependencies and scripts

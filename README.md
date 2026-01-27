@@ -51,7 +51,7 @@ npm run dev
 ## 🏗️ Project Structure
 
 ```
-ai-gto-poc-website/
+nashpoint-poker/
 ├── app/
 │   ├── layout.tsx           # Root layout with Navbar & Footer
 │   ├── page.tsx             # Landing page

@@ -7,7 +7,7 @@ Your Neon Postgres integration is set up, but you need to create the database ta
 ### Step 1: Open Neon SQL Editor
 
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-2. Select your project: `ai-gto-poc-website`
+2. Select your project: `nashpoint-poker`
 3. Go to **Storage** tab
 4. Click on your Neon database
 5. Click **"Open in Neon Console"**
