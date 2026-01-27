@@ -253,16 +253,27 @@
 
 ---
 
-## 🎨 Color Scheme
+## 🎨 Color Scheme (Warm, Luxurious, High-Stakes)
 
 ```
-Background:    #121212 ████ Very dark, almost black
-Primary:       #1A1A1A ████ Deep charcoal
-Surface:       #1E1E1E ████ Elevated dark surface
-Accent:        #C48F56 ████ Warm gold/copper
-Text Primary:  #F1EEE8 ████ Light cream
-Text Secondary:#C7C2BA ████ Muted beige
+Background:     #0A0908 ████ Deep warm black
+Primary:        #0C0A09 ████ Warm black
+Surface:        #1C1917 ████ Warm dark surface
+Surface Elev:   #292524 ████ Elevated elements
+Border:         #44403C ████ Warm borders
+Accent:         #F97316 ████ Vibrant orange (energy, action)
+Accent Dark:    #EA580C ████ Dark orange (hover states)
+Accent Gold:    #FBBF24 ████ Bright gold (premium highlights)
+Text Primary:   #FAFAF9 ████ Warm white
+Text Secondary: #A8A29E ████ Warm muted gray
 ```
+
+**Why This Stands Out from GTO Wizard:**
+- GTO Wizard uses cool blue/purple tones
+- Nash Point uses warm orange/gold – completely different feel
+- Evokes high-stakes casino luxury and confidence
+- Warm colors create excitement and bold decision-making energy
+- Premium atmosphere signals quality training tools
 
 ---
 

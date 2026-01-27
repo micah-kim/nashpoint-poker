@@ -40,12 +40,16 @@ Navigate to: http://localhost:3000
 ## 🎨 Design Tokens (Tailwind)
 
 All colors are defined in `tailwind.config.ts`:
-- `brand-primary` - #1A1A1A (charcoal)
-- `brand-bg` - #121212 (dark background)
-- `brand-accent` - #C48F56 (warm gold)
-- `brand-surface` - #1E1E1E (elevated surface)
-- `brand-text-primary` - #F1EEE8 (light text)
-- `brand-text-secondary` - #C7C2BA (muted text)
+- `brand-primary` - #0C0A09 (warm black)
+- `brand-bg` - #0A0908 (deep warm black background)
+- `brand-accent` - #F97316 (vibrant orange - energy, action)
+- `brand-accent-dark` - #EA580C (dark orange for hover)
+- `brand-accent-gold` - #FBBF24 (bright gold - chips, premium)
+- `brand-surface` - #1C1917 (warm card surface)
+- `brand-surface-elevated` - #292524 (elevated elements)
+- `brand-border` - #44403C (warm subtle borders)
+- `brand-text-primary` - #FAFAF9 (warm white text)
+- `brand-text-secondary` - #A8A29E (warm muted text)
 
 ## 📱 Features
 

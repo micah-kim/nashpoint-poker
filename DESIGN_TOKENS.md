@@ -5,31 +5,44 @@ Copilot: ALWAYS reference this file before changing any styling.
 
 ---
 
-# ▶ Brand Color Palette (Modern, Tech, Professional)
-Primary (navy blue): `#1B3A57`  
-Background: `#0F1419`  
-Accent (cyan blue): `#00A5E0`  
-Accent Dark (navy): `#1B3A57`  
-Surface: `#1A2332`  
-Text Primary: `#F0F4F8`  
-Text Secondary: `#B0BEC5`
+# ▶ Brand Color Palette (Warm, Luxurious, High-Stakes)
+Primary (warm black): `#0C0A09`  
+Background: `#0A0908`  
+Accent (vibrant orange): `#F97316`  
+Accent Dark: `#EA580C`  
+Accent Gold: `#FBBF24`  
+Surface: `#1C1917`  
+Surface Elevated: `#292524`  
+Border: `#44403C`  
+Text Primary: `#FAFAF9`  
+Text Secondary: `#A8A29E`
 
 **Brand Philosophy:**
-The navy and cyan colors represent the duality of Nash Point:
-- Navy (stable, foundational) = Nash Equilibrium / GTO principles
-- Cyan (dynamic, adaptive) = Exploiting human irrationality
-- The shattering particle effect in the logo = Breaking rigid theory for practical profit
+The warm amber and gold colors create a distinctly different feel from competitors:
+- Vibrant Orange (energy, action, confidence) = Bold decision-making
+- Gold (chips, wealth, premium) = High-stakes success
+- Warm black tones = Luxurious casino atmosphere
+- High contrast = Professional and easy on the eyes
+
+**Why this palette stands out:**
+- Completely different from GTO Wizard's blue/purple scheme
+- Evokes high-stakes poker rooms and casino luxury
+- Warm colors create excitement and confidence
+- Premium feel signals quality training
 
 ---
 
-# ▶ Tailwind Tokens (must match tailwind.config.js)
-brand-primary: #1B3A57
-brand-bg: #0F1419
-brand-accent: #00A5E0
-brand-accent-dark: #1B3A57
-brand-surface: #1A2332
-brand-text-primary: #F0F4F8
-brand-text-secondary: #B0BEC5
+# ▶ Tailwind Tokens (must match tailwind.config.ts)
+brand-primary: #0C0A09 (warm black)
+brand-bg: #0A0908 (deep warm black)
+brand-accent: #F97316 (vibrant orange)
+brand-accent-dark: #EA580C (dark orange)
+brand-accent-gold: #FBBF24 (bright gold for highlights)
+brand-surface: #1C1917 (warm dark surface)
+brand-surface-elevated: #292524 (elevated elements)
+brand-border: #44403C (warm borders)
+brand-text-primary: #FAFAF9 (warm white)
+brand-text-secondary: #A8A29E (warm gray)
 
 Copilot:  
 When the user asks to “change a color everywhere” — update tokens in `tailwind.config.js` AND reference this file.

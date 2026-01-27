@@ -9,13 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'brand-primary': '#1B3A57',
-        'brand-bg': '#0F1419',
-        'brand-accent': '#00A5E0',
-        'brand-accent-dark': '#1B3A57',
-        'brand-surface': '#1A2332',
-        'brand-text-primary': '#F0F4F8',
-        'brand-text-secondary': '#B0BEC5',
+        'brand-primary': '#0C0A09',
+        'brand-bg': '#0A0908',
+        'brand-accent': '#F97316',
+        'brand-accent-dark': '#EA580C',
+        'brand-accent-gold': '#FBBF24',
+        'brand-surface': '#1C1917',
+        'brand-surface-elevated': '#292524',
+        'brand-text-primary': '#FAFAF9',
+        'brand-text-secondary': '#A8A29E',
+        'brand-border': '#44403C',
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
