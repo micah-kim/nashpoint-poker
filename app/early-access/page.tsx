@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import WaitlistForm from '@/components/WaitlistForm'
+import { Card } from '@/components/ui'
+import { earlyAccessContent, earlyAccessBenefits } from '@/lib/content'
+import { Check } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Early Access - Nash Point',
@@ -12,51 +15,34 @@ export default function EarlyAccessPage() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
+          <header className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl font-bold text-brand-text-primary mb-6">
-              Join the Nash Point Waitlist
+              {earlyAccessContent.title}
             </h1>
             <p className="text-xl text-brand-text-secondary mb-4">
-              Be among the first to master equilibrium and exploit irrationality
+              {earlyAccessContent.subtitle}
             </p>
             <p className="text-brand-text-secondary">
-              Join our waitlist and we&apos;ll notify you when we launch. 
-              Early access members will get exclusive benefits and pricing.
+              {earlyAccessContent.description}
             </p>
-          </div>
+          </header>
 
           {/* Benefits */}
-          <div className="mb-12 bg-brand-surface p-6 rounded-lg border border-brand-accent/20">
+          <Card variant="default" className="mb-12">
             <h2 className="text-xl font-bold text-brand-text-primary mb-4">
               Early Access Benefits
             </h2>
-            <ul className="space-y-3">
-              <li className="flex items-start">
-                <span className="text-brand-accent mr-3">✓</span>
-                <span className="text-brand-text-secondary">
-                  First access to the training platform
-                </span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-brand-accent mr-3">✓</span>
-                <span className="text-brand-text-secondary">
-                  Discount launch pricing
-                </span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-brand-accent mr-3">✓</span>
-                <span className="text-brand-text-secondary">
-                  Direct input on feature development
-                </span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-brand-accent mr-3">✓</span>
-                <span className="text-brand-text-secondary">
-                  Priority support
-                </span>
-              </li>
+            <ul className="space-y-3" role="list">
+              {earlyAccessBenefits.map((benefit, index) => (
+                <li key={index} className="flex items-start">
+                  <Check className="text-brand-accent mr-3 flex-shrink-0 mt-0.5" size={18} aria-hidden="true" />
+                  <span className="text-brand-text-secondary">
+                    {benefit}
+                  </span>
+                </li>
+              ))}
             </ul>
-          </div>
+          </Card>
 
           {/* Form */}
           <div className="flex justify-center">
@@ -66,8 +52,7 @@ export default function EarlyAccessPage() {
           {/* Privacy Note */}
           <div className="mt-8 text-center">
             <p className="text-sm text-brand-text-secondary">
-              We respect your privacy. Your email will only be used to notify you about product updates. 
-              We&apos;ll never share your information with third parties.
+              {earlyAccessContent.privacyNote}
             </p>
           </div>
         </div>

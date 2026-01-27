@@ -24,6 +24,7 @@ This proof-of-concept landing site:
 - **React 18**
 - **TypeScript**
 - **Tailwind CSS**
+- **Lucide React** (icons)
 - **Vercel** (deployment ready)
 
 ## 📦 Getting Started
@@ -70,7 +71,20 @@ ai-gto-poc-website/
 │   ├── Hero.tsx             # Hero section
 │   ├── FeatureSection.tsx   # Feature grid
 │   ├── ComparisonSection.tsx # vs GTO Wizard comparison
-│   └── WaitlistForm.tsx     # Email capture form
+│   ├── WaitlistForm.tsx     # Email capture form
+│   ├── ui/                  # Shared UI primitives
+│   │   ├── Button.tsx       # Reusable button
+│   │   ├── Card.tsx         # Reusable card
+│   │   ├── Badge.tsx        # Reusable badge
+│   │   ├── SectionHeading.tsx # Section heading
+│   │   └── Icon.tsx         # Lucide icon wrapper
+│   └── mockups/             # Interactive mockups
+│       ├── HandReviewMockup.tsx
+│       ├── GameSimulationMockup.tsx
+│       └── QuizMockup.tsx
+├── lib/
+│   ├── content.ts           # Centralized marketing copy
+│   └── hooks.ts             # Shared React hooks
 ├── tailwind.config.ts       # Tailwind configuration
 ├── next.config.js           # Next.js configuration
 └── package.json             # Dependencies
@@ -78,12 +92,13 @@ ai-gto-poc-website/
 
 ## 🎨 Design System
 
-The site follows a minimalist, warm, masculine brand identity:
+The site follows a modern, professional brand identity:
 
-- **Primary Color**: Deep charcoal (#1A1A1A)
-- **Background**: Dark (#121212)
-- **Accent**: Warm gold/copper (#C48F56)
+- **Primary Color**: Navy blue (#1B3A57)
+- **Background**: Dark (#0F1419)
+- **Accent**: Cyan blue (#00A5E0)
 - **Typography**: Inter font family
+- **Icons**: Lucide React (via `<Icon>` component)
 
 All design tokens are defined in:
 - `tailwind.config.ts`

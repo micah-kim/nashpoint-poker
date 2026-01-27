@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import { siteConfig } from '@/lib/content'
 
 export default function LoadingScreen() {
   const [isLoading, setIsLoading] = useState(true)
@@ -39,18 +41,24 @@ export default function LoadingScreen() {
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-brand-primary transition-opacity duration-500 ${
         fadeOut ? 'opacity-0' : 'opacity-100'
       }`}
+      role="status"
+      aria-label="Loading Nash Point"
+      aria-live="polite"
     >
       {/* Logo with pulse animation */}
       <div className="animate-pulse">
-        <img
+        <Image
           src="/assets/images/logo.png"
-          alt="Nash Point"
+          alt={siteConfig.name}
+          width={144}
+          height={96}
           className="h-24 w-auto mb-8"
+          priority
         />
       </div>
 
       {/* Loading indicator */}
-      <div className="flex space-x-2">
+      <div className="flex space-x-2" aria-hidden="true">
         <div className="w-3 h-3 bg-brand-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
         <div className="w-3 h-3 bg-brand-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
         <div className="w-3 h-3 bg-brand-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -58,8 +66,11 @@ export default function LoadingScreen() {
 
       {/* Tagline */}
       <p className="mt-8 text-brand-text-secondary text-sm">
-        Perfect theory. Imperfect opponents.
+        {siteConfig.tagline}
       </p>
+      
+      {/* Screen reader announcement */}
+      <span className="sr-only">Loading application, please wait...</span>
     </div>
   )
 }

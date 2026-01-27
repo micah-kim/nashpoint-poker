@@ -1,67 +1,59 @@
 import Link from 'next/link'
+import Image from 'next/image'
+import { Button } from '@/components/ui'
+import { navLinks, footerContent, siteConfig } from '@/lib/content'
 
 export default function Footer() {
   return (
-    <footer className="bg-brand-primary border-t border-brand-surface">
+    <footer className="bg-brand-primary border-t border-brand-surface" role="contentinfo">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
-            <img 
+            <Image 
               src="/assets/images/logo.png" 
-              alt="Nash Point - AI Poker Training" 
+              alt={siteConfig.name}
+              width={144}
+              height={48}
               className="h-12 w-auto mb-4"
             />
             <p className="text-brand-text-secondary text-sm">
-              Where game theory meets human irrationality.
+              {footerContent.tagline}
             </p>
           </div>
 
           {/* Links */}
-          <div>
+          <nav aria-label="Footer navigation">
             <h3 className="text-brand-text-primary font-semibold mb-4">Navigation</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/" className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-200 text-sm">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-200 text-sm">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link href="/demo" className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-200 text-sm">
-                  Demo
-                </Link>
-              </li>
-              <li>
-                <Link href="/early-access" className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-200 text-sm">
-                  Early Access
-                </Link>
-              </li>
+            <ul className="space-y-2" role="list">
+              {navLinks.map((link) => (
+                <li key={link.href}>
+                  <Link 
+                    href={link.href} 
+                    className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-200 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded-sm"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
           {/* Contact */}
           <div>
-            <h3 className="text-brand-text-primary font-semibold mb-4">Get Updates</h3>
+            <h3 className="text-brand-text-primary font-semibold mb-4">{footerContent.ctaTitle}</h3>
             <p className="text-brand-text-secondary text-sm mb-4">
-              Join our waitlist to be the first to know when we launch.
+              {footerContent.ctaDescription}
             </p>
-            <Link
-              href="/early-access"
-              className="inline-block bg-brand-accent text-brand-primary px-6 py-2 rounded-md font-semibold hover:bg-brand-accent/90 transition-colors duration-200 text-sm"
-            >
+            <Button href="/early-access" size="sm">
               Join Waitlist
-            </Link>
+            </Button>
           </div>
         </div>
 
         <div className="mt-12 pt-8 border-t border-brand-surface text-center">
           <p className="text-brand-text-secondary text-sm">
-            © {new Date().getFullYear()} Nash Point. All rights reserved.
+            {footerContent.copyright}
           </p>
         </div>
       </div>
