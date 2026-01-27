@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS waitlist (
 
 -- If you already have the table, run this to add the name column:
 -- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS name VARCHAR(255);
--- UPDATE waitlist SET name = '' WHERE name IS NULL;
+-- UPDATE waitlist SET name = 'Legacy User' WHERE name IS NULL;
 -- ALTER TABLE waitlist ALTER COLUMN name SET NOT NULL;
 
 -- Create an index on email for faster lookups
