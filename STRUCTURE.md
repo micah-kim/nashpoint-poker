@@ -37,8 +37,25 @@ ai-gto-poc-website/
 │   ├── ToolsSection.tsx          # Tool mockups (Hand Review, Simulation, Quizzes)
 │   ├── FeatureSection.tsx        # 4-card feature grid
 │   ├── ComparisonSection.tsx     # vs GTO Wizard comparison
-│   ├── LoadingScreen.tsx         # Animated loading splash
-│   └── WaitlistForm.tsx          # Email capture form
+│   ├── WaitlistForm.tsx          # Email capture form
+│   │
+│   ├── ui/                       # Shared UI primitives
+│   │   ├── index.ts              # Export barrel
+│   │   ├── Button.tsx            # Reusable button component
+│   │   ├── Card.tsx              # Reusable card component
+│   │   ├── Badge.tsx             # Reusable badge component
+│   │   ├── SectionHeading.tsx    # Reusable section heading
+│   │   └── Icon.tsx              # Icon wrapper for Lucide React icons
+│   │
+│   └── mockups/                  # Interactive mockup components
+│       ├── index.ts              # Export barrel
+│       ├── HandReviewMockup.tsx  # Hand review demo
+│       ├── GameSimulationMockup.tsx  # Game simulation demo
+│       └── QuizMockup.tsx        # Quiz demo
+│
+├── 📚 Lib (Utilities & Content)
+│   ├── content.ts                # Centralized marketing copy & data
+│   └── hooks.ts                  # Shared React hooks
 │
 ├── 📚 Documentation
 │   ├── README.md                 # Complete project documentation
@@ -68,7 +85,7 @@ ai-gto-poc-website/
 #### `app/layout.tsx`
 - Root layout component
 - Wraps all pages
-- Includes LoadingScreen, Navbar and Footer
+- Includes Navbar and Footer
 - Sets up global metadata
 - Configures Inter font
 
@@ -128,8 +145,7 @@ ai-gto-poc-website/
 - Clear value proposition headline
 - Badge highlighting uniqueness
 - CTA buttons (Join Waitlist, See What's Coming)
-- Three preview cards for tools
-- Gradient decorations
+- Three preview cards for tools with Lucide icons
 
 #### `components/ToolsSection.tsx`
 - Three tool showcases with interactive mockups

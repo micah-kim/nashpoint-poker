@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { Button, Card, SectionHeading, Icon } from '@/components/ui'
+import { aboutContent, approachFeatures, roadmap } from '@/lib/content'
 
 export const metadata: Metadata = {
   title: 'About Nash Point - AI Poker Training',
@@ -10,20 +12,20 @@ export default function AboutPage() {
     <div className="py-20 bg-brand-bg">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
         {/* Header */}
-        <div className="text-center mb-16">
+        <header className="text-center mb-16">
           <h1 className="text-4xl sm:text-5xl font-bold text-brand-text-primary mb-6">
-            Inspired by John Nash
+            {aboutContent.headline}
           </h1>
           <p className="text-xl text-brand-text-secondary">
-            Where Nash Equilibrium meets human irrationality
+            {aboutContent.subheadline}
           </p>
-        </div>
+        </header>
 
         {/* Nash Point Origin */}
-        <section className="mb-16">
-          <div className="bg-gradient-to-br from-brand-accent/20 to-brand-surface p-8 rounded-lg border border-brand-accent">
-            <h2 className="text-2xl font-bold text-brand-accent mb-4">
-              Why &quot;Nash Point&quot;?
+        <section className="mb-16" aria-labelledby="origin-heading">
+          <Card variant="accent" className="p-8">
+            <h2 id="origin-heading" className="text-2xl font-bold text-brand-accent mb-4">
+              {aboutContent.nashPointOrigin.title}
             </h2>
             <div className="space-y-4 text-brand-text-secondary">
               <p>
@@ -39,17 +41,17 @@ export default function AboutPage() {
                 foundation, then show you how to exploit the inevitable irrationality of your opponents.
               </p>
               <p className="text-brand-accent italic">
-                Perfect theory. Imperfect opponents. Maximum profit.
+                {aboutContent.nashPointOrigin.tagline}
               </p>
             </div>
-          </div>
+          </Card>
         </section>
 
         {/* The Problem */}
-        <section className="mb-16">
-          <div className="bg-brand-surface p-8 rounded-lg border border-brand-accent/20">
-            <h2 className="text-2xl font-bold text-brand-accent mb-4">
-              The Problem with Current Solvers
+        <section className="mb-16" aria-labelledby="problem-heading">
+          <Card variant="default" className="p-8">
+            <h2 id="problem-heading" className="text-2xl font-bold text-brand-accent mb-4">
+              {aboutContent.problem.title}
             </h2>
             <div className="space-y-4 text-brand-text-secondary">
               <p>
@@ -64,115 +66,59 @@ export default function AboutPage() {
                 And if you&apos;re only playing pure GTO, you&apos;re leaving money on the table.
               </p>
             </div>
-          </div>
+          </Card>
         </section>
 
         {/* Our Approach */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-brand-text-primary mb-8">
+        <section className="mb-16" aria-labelledby="approach-heading">
+          <h2 id="approach-heading" className="text-3xl font-bold text-brand-text-primary mb-8">
             Why Our Training Method is Different
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-brand-primary p-6 rounded-lg border border-brand-surface">
-              <div className="text-3xl mb-3">🎯</div>
-              <h3 className="text-xl font-bold text-brand-text-primary mb-3">
-                Opponent Modeling
-              </h3>
-              <p className="text-brand-text-secondary">
-                Train against specific opponent types: tight-aggressive, loose-passive, 
-                micro-stakes regulars, and more. Learn when to adjust.
-              </p>
-            </div>
-
-            <div className="bg-brand-primary p-6 rounded-lg border border-brand-surface">
-              <div className="text-3xl mb-3">💡</div>
-              <h3 className="text-xl font-bold text-brand-text-primary mb-3">
-                Explanation-Driven
-              </h3>
-              <p className="text-brand-text-secondary">
-                Don&apos;t just memorize charts. Understand why each decision is optimal 
-                with AI-powered explanations of the strategic concepts.
-              </p>
-            </div>
-
-            <div className="bg-brand-primary p-6 rounded-lg border border-brand-surface">
-              <div className="text-3xl mb-3">🔬</div>
-              <h3 className="text-xl font-bold text-brand-text-primary mb-3">
-                Solver-Backed
-              </h3>
-              <p className="text-brand-text-secondary">
-                Powered by open-source GTO solver technology. Get accurate, 
-                reliable solutions without expensive subscriptions.
-              </p>
-            </div>
-
-            <div className="bg-brand-primary p-6 rounded-lg border border-brand-surface">
-              <div className="text-3xl mb-3">🎲</div>
-              <h3 className="text-xl font-bold text-brand-text-primary mb-3">
-                Randomized Training
-              </h3>
-              <p className="text-brand-text-secondary">
-                Practice with scenarios that mirror real gameplay. Build intuition 
-                through spaced repetition and adaptive difficulty.
-              </p>
-            </div>
+            {approachFeatures.map((feature, index) => (
+              <div key={index} className="bg-brand-primary p-6 rounded-lg border border-brand-surface">
+                <div className="mb-3">
+                  <Icon name={feature.icon} size="lg" />
+                </div>
+                <h3 className="text-xl font-bold text-brand-text-primary mb-3">
+                  {feature.title}
+                </h3>
+                <p className="text-brand-text-secondary">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
           </div>
         </section>
 
         {/* Roadmap */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-brand-text-primary mb-8">
+        <section className="mb-16" aria-labelledby="roadmap-heading">
+          <h2 id="roadmap-heading" className="text-3xl font-bold text-brand-text-primary mb-8">
             Product Roadmap
           </h2>
           <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="bg-brand-accent text-brand-primary rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 flex-shrink-0">
-                1
+            {roadmap.map((phase) => (
+              <div key={phase.phase} className="flex items-start">
+                <div className={`${phase.active ? 'bg-brand-accent text-brand-primary' : 'bg-brand-surface text-brand-text-primary border-2 border-brand-accent'} rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 flex-shrink-0`}>
+                  {phase.phase}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-brand-text-primary mb-1">
+                    {phase.title}
+                  </h3>
+                  <p className="text-brand-text-secondary">
+                    {phase.description}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-brand-text-primary mb-1">
-                  Phase 1: Core Training Engine
-                </h3>
-                <p className="text-brand-text-secondary">
-                  Hand input, opponent type selection, AI commentary, and GTO solver integration
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <div className="bg-brand-surface text-brand-text-primary border-2 border-brand-accent rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 flex-shrink-0">
-                2
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-brand-text-primary mb-1">
-                  Phase 2: Training Modes
-                </h3>
-                <p className="text-brand-text-secondary">
-                  Random scenario generator, progress tracking, and spaced repetition system
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <div className="bg-brand-surface text-brand-text-primary border-2 border-brand-accent rounded-full w-8 h-8 flex items-center justify-center font-bold mr-4 flex-shrink-0">
-                3
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-brand-text-primary mb-1">
-                  Phase 3: Advanced Features
-                </h3>
-                <p className="text-brand-text-secondary">
-                  Hand history analysis, custom opponent profiles, and performance analytics
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
         {/* Solver Integration */}
-        <section className="mb-16">
-          <div className="bg-gradient-to-br from-brand-accent/20 to-brand-surface p-8 rounded-lg border border-brand-accent">
-            <h2 className="text-2xl font-bold text-brand-text-primary mb-4">
+        <section className="mb-16" aria-labelledby="solver-heading">
+          <Card variant="accent" className="p-8">
+            <h2 id="solver-heading" className="text-2xl font-bold text-brand-text-primary mb-4">
               How Our Solver Integration Works
             </h2>
             <div className="space-y-4 text-brand-text-secondary">
@@ -187,7 +133,7 @@ export default function AboutPage() {
                 This gives you the best of both worlds: <strong className="text-brand-text-primary">GTO accuracy</strong> combined with <strong className="text-brand-text-primary">exploitative adjustments</strong>.
               </p>
             </div>
-          </div>
+          </Card>
         </section>
 
         {/* CTA */}
@@ -198,12 +144,9 @@ export default function AboutPage() {
           <p className="text-xl text-brand-text-secondary mb-8">
             Join our waitlist to get early access when we launch
           </p>
-          <a
-            href="/early-access"
-            className="inline-block bg-brand-accent text-brand-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-brand-accent/90 transition-all duration-200 hover:scale-105"
-          >
+          <Button href="/early-access" size="lg">
             Join the Waitlist
-          </a>
+          </Button>
         </section>
       </div>
     </div>

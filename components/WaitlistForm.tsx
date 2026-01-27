@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Button, Icon } from '@/components/ui'
 
 export default function WaitlistForm() {
   const [email, setEmail] = useState('')
@@ -33,7 +34,7 @@ export default function WaitlistForm() {
         setStatus('error')
         setMessage(data.error || 'Something went wrong. Please try again.')
       }
-    } catch (error) {
+    } catch {
       setStatus('error')
       setMessage('Failed to submit. Please try again.')
     }
@@ -42,8 +43,10 @@ export default function WaitlistForm() {
   return (
     <div className="bg-brand-surface p-8 rounded-lg border border-brand-accent/20 max-w-md w-full">
       {status === 'success' ? (
-        <div className="text-center">
-          <div className="text-5xl mb-4">🎉</div>
+        <div className="text-center" role="status" aria-live="polite">
+          <div className="mb-4 flex justify-center">
+            <Icon name="party" size="xl" />
+          </div>
           <h3 className="text-2xl font-bold text-brand-accent mb-4">You&apos;re on the list!</h3>
           <p className="text-brand-text-secondary mb-6">{message}</p>
           <button
@@ -51,28 +54,33 @@ export default function WaitlistForm() {
               setStatus('idle')
               setMessage('')
             }}
-            className="text-brand-accent hover:text-brand-accent/80 transition-colors duration-200"
+            className="text-brand-accent hover:text-brand-accent/80 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded-sm"
           >
             Join another email →
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <h3 className="text-2xl font-bold text-brand-text-primary mb-6">Join the Waitlist</h3>
 
           <div className="mb-4">
             <label htmlFor="email" className="block text-brand-text-secondary mb-2 text-sm">
-              Email Address *
+              Email Address <span aria-hidden="true">*</span>
+              <span className="sr-only">(required)</span>
             </label>
             <input
               type="email"
               id="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary focus:outline-none focus:border-brand-accent transition-colors duration-200"
+              aria-required="true"
+              aria-describedby={status === 'error' ? 'form-error' : undefined}
+              className="w-full px-4 py-3 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary focus:outline-none focus:border-brand-accent focus-visible:ring-2 focus-visible:ring-brand-accent transition-colors duration-200"
               placeholder="you@example.com"
               disabled={status === 'loading'}
+              autoComplete="email"
             />
           </div>
 
@@ -82,28 +90,34 @@ export default function WaitlistForm() {
             </label>
             <textarea
               id="notes"
+              name="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
-              className="w-full px-4 py-3 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary focus:outline-none focus:border-brand-accent transition-colors duration-200 resize-none"
+              className="w-full px-4 py-3 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary focus:outline-none focus:border-brand-accent focus-visible:ring-2 focus-visible:ring-brand-accent transition-colors duration-200 resize-none"
               placeholder="What features are you most interested in?"
               disabled={status === 'loading'}
             />
           </div>
 
           {status === 'error' && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded-md text-red-400 text-sm">
+            <div 
+              id="form-error" 
+              className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded-md text-red-400 text-sm"
+              role="alert"
+              aria-live="assertive"
+            >
               {message}
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={status === 'loading'}
-            className="w-full bg-brand-accent text-brand-primary py-3 rounded-md font-semibold hover:bg-brand-accent/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full"
           >
             {status === 'loading' ? 'Submitting...' : 'Join Waitlist'}
-          </button>
+          </Button>
         </form>
       )}
     </div>

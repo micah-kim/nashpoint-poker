@@ -1,0 +1,216 @@
+/**
+ * Centralized content module for marketing copy and structured data.
+ * Edit content here instead of directly in page components.
+ */
+
+import type { IconName } from '@/components/ui'
+
+// ============================================================================
+// SITE METADATA
+// ============================================================================
+
+export const siteConfig = {
+  name: 'Nash Point',
+  tagline: 'Where game theory meets human irrationality',
+  description: 'AI poker training inspired by John Nash. Master GTO principles while exploiting human irrationality.',
+}
+
+// ============================================================================
+// HERO SECTION
+// ============================================================================
+
+export const heroContent = {
+  badge: 'The First of Its Kind',
+  headline: 'The First Poker Trainer That',
+  headlineAccent: 'Blends GTO + Exploits',
+  subheadline: 'Stop memorizing charts. Start understanding decisions.',
+  description: 'Nash Point uses AI to seamlessly combine game-theory optimal strategies with exploitative adjustments based on your opponents. Review hands, simulate games, and master spots—all with feedback you can actually use.',
+  primaryCta: 'Join the Waitlist',
+  secondaryCta: "See What's Coming",
+}
+
+export const heroTools: { icon: IconName; title: string; description: string }[] = [
+  {
+    icon: 'search',
+    title: 'Hand Review',
+    description: 'Analyze any hand with AI',
+  },
+  {
+    icon: 'gamepad',
+    title: 'Game Simulation',
+    description: 'Practice vs AI opponents',
+  },
+  {
+    icon: 'help',
+    title: 'Spot Quizzes',
+    description: 'Sharpen your decisions',
+  },
+]
+
+// ============================================================================
+// FEATURES SECTION
+// ============================================================================
+
+export const featuresContent = {
+  title: 'Why Nash Point is Different',
+  subtitle: 'Master Nash Equilibrium, then learn when to break it',
+}
+
+export const features: { title: string; description: string; icon: IconName }[] = [
+  {
+    title: 'Nash Equilibrium Foundation',
+    description: "Learn GTO principles built on John Nash's game theory. Master the mathematically optimal baseline strategy.",
+    icon: 'scale',
+  },
+  {
+    title: 'Exploit Human Irrationality',
+    description: 'Understand when and how to deviate from equilibrium based on opponent tendencies and psychological patterns.',
+    icon: 'brain',
+  },
+  {
+    title: 'Solver-Backed Accuracy',
+    description: 'Built on industry-standard GTO solver technology. Get proven, mathematically accurate solutions.',
+    icon: 'microscope',
+  },
+  {
+    title: 'AI-Powered Insights',
+    description: 'Not just charts. Understand the reasoning behind every decision with explanations of strategic concepts.',
+    icon: 'lightbulb',
+  },
+]
+
+// ============================================================================
+// COMPARISON SECTION
+// ============================================================================
+
+export const comparisonContent = {
+  title: 'How We Compare to GTO Wizard',
+  subtitle: 'Built for the real world, not just theory',
+  disclaimer: 'GTO Wizard is a great tool for learning baseline strategy. We build on that foundation to help you win in real games.',
+}
+
+export const nashPointFeatures = [
+  { text: 'Nash Equilibrium foundation', detail: 'GTO as your baseline' },
+  { text: 'Exploit irrationality', detail: 'Profit from human tendencies' },
+  { text: 'AI explanations', detail: 'Understand the "why"' },
+  { text: 'Open-source solver engine', detail: 'GTO accuracy without expensive subscriptions' },
+  { text: 'Opponent modeling', detail: 'Adaptive strategies' },
+]
+
+export const competitorFeatures = [
+  { text: 'Assumes balanced opponents' },
+  { text: 'Pure GTO focus only' },
+  { text: 'Chart-based learning with limited context' },
+  { text: 'Proprietary solver (paid subscription)' },
+  { text: 'Pre-computed solutions' },
+]
+
+// ============================================================================
+// ABOUT PAGE
+// ============================================================================
+
+export const aboutContent = {
+  headline: 'Inspired by John Nash',
+  subheadline: 'Where Nash Equilibrium meets human irrationality',
+  nashPointOrigin: {
+    title: 'Why "Nash Point"?',
+    paragraphs: [
+      'John Nash revolutionized game theory with the Nash Equilibrium - the foundation of GTO (Game Theory Optimal) poker strategy.',
+      'But Nash also understood something profound: humans are inherently irrational. His own struggles with schizophrenia gave him unique insight into the gap between theoretical perfection and human reality.',
+      'Nash Point embodies this duality. We teach you GTO principles as your foundation, then show you how to exploit the inevitable irrationality of your opponents.',
+    ],
+    tagline: 'Perfect theory. Imperfect opponents. Maximum profit.',
+  },
+  problem: {
+    title: 'The Problem with Current Solvers',
+    paragraphs: [
+      'Traditional GTO solvers like GTO Wizard are excellent for learning baseline strategy. They show you how to play against perfectly balanced opponents who never make mistakes.',
+      "But here's the reality: your opponents aren't perfect.",
+      "They over-fold to aggression. They call too wide. They have exploitable tendencies. And if you're only playing pure GTO, you're leaving money on the table.",
+    ],
+  },
+}
+
+export const approachFeatures: { icon: IconName; title: string; description: string }[] = [
+  {
+    icon: 'target',
+    title: 'Opponent Modeling',
+    description: 'Train against specific opponent types: tight-aggressive, loose-passive, micro-stakes regulars, and more. Learn when to adjust.',
+  },
+  {
+    icon: 'lightbulb',
+    title: 'Explanation-Driven',
+    description: "Don't just memorize charts. Understand why each decision is optimal with AI-powered explanations of the strategic concepts.",
+  },
+  {
+    icon: 'microscope',
+    title: 'Solver-Backed',
+    description: 'Powered by open-source GTO solver technology. Get accurate, reliable solutions without expensive subscriptions.',
+  },
+  {
+    icon: 'dice',
+    title: 'Randomized Training',
+    description: 'Practice with scenarios that mirror real gameplay. Build intuition through spaced repetition and adaptive difficulty.',
+  },
+]
+
+export const roadmap = [
+  {
+    phase: 1,
+    title: 'Phase 1: Core Training Engine',
+    description: 'Hand input, opponent type selection, AI commentary, and GTO solver integration',
+    active: true,
+  },
+  {
+    phase: 2,
+    title: 'Phase 2: Training Modes',
+    description: 'Random scenario generator, progress tracking, and spaced repetition system',
+    active: false,
+  },
+  {
+    phase: 3,
+    title: 'Phase 3: Advanced Features',
+    description: 'Hand history analysis, custom opponent profiles, and performance analytics',
+    active: false,
+  },
+]
+
+// ============================================================================
+// EARLY ACCESS PAGE
+// ============================================================================
+
+export const earlyAccessContent = {
+  title: 'Join the Nash Point Waitlist',
+  subtitle: 'Be among the first to master equilibrium and exploit irrationality',
+  description: "Join our waitlist and we'll notify you when we launch. Early access members will get exclusive benefits and pricing.",
+  privacyNote: "We respect your privacy. Your email will only be used to notify you about product updates. We'll never share your information with third parties.",
+}
+
+export const earlyAccessBenefits = [
+  'First access to the training platform',
+  'Discount launch pricing',
+  'Direct input on feature development',
+  'Priority support',
+]
+
+// ============================================================================
+// NAVIGATION
+// ============================================================================
+
+export const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/about', label: 'About' },
+  { href: '/demo', label: 'Demo' },
+  { href: '/early-access', label: 'Early Access' },
+]
+
+// ============================================================================
+// FOOTER
+// ============================================================================
+
+export const footerContent = {
+  tagline: 'Where game theory meets human irrationality.',
+  copyright: `© ${new Date().getFullYear()} Nash Point. All rights reserved.`,
+  ctaTitle: 'Get Updates',
+  ctaDescription: 'Join our waitlist to be the first to know when we launch.',
+}

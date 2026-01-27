@@ -43,6 +43,38 @@ When the user asks to “change a color everywhere” — update tokens in `tail
 
 ---
 
+# ▶ Icons (Lucide React)
+All icons use Lucide React via the `<Icon>` component in `components/ui/Icon.tsx`.
+
+**Available Icon Names:**
+- `search` - Hand Review feature
+- `gamepad` - Game Simulation feature
+- `help` - Quizzes feature
+- `scale` - Nash Equilibrium / Balance
+- `brain` - Exploit / Psychology
+- `microscope` - Solver / Analysis
+- `lightbulb` - Insights / Ideas
+- `target` - Opponent Modeling
+- `dice` - Randomized Training
+- `rocket` - Launch / Start
+- `party` - Success / Celebration
+- `check` - Checkmarks in lists
+- `circle` - Neutral list items
+
+**Icon Sizes:**
+- `sm` = 16px
+- `md` = 24px (default)
+- `lg` = 32px
+- `xl` = 48px
+
+**Usage:**
+```tsx
+import { Icon } from '@/components/ui'
+<Icon name="search" size="lg" />
+```
+
+---
+
 # ▶ Logo
 Primary logo: `/assets/images/logo.png`  
 The NLR logo features letters in navy blue (#1B3A57) and cyan blue (#00A5E0) with a shattering/particle effect, symbolizing how Nash Point breaks rigid GTO theory to adapt to human irrationality.
