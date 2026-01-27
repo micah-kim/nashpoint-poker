@@ -80,7 +80,7 @@ export default function AboutPage() {
               </h3>
               <p className="text-brand-text-secondary">
                 Train against specific opponent types: tight-aggressive, loose-passive, 
-                micro-stakes regulars, and more. Learn when to adjust.
+                micro-stakes reg, and more. Learn when and how to adjust.
               </p>
             </div>
 

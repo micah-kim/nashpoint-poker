@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 export default function WaitlistForm() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -19,7 +20,7 @@ export default function WaitlistForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, notes }),
+        body: JSON.stringify({ name, email, notes }),
       })
 
       const data = await response.json()
@@ -27,6 +28,7 @@ export default function WaitlistForm() {
       if (response.ok) {
         setStatus('success')
         setMessage(data.message || 'Successfully joined the waitlist!')
+        setName('')
         setEmail('')
         setNotes('')
       } else {
@@ -59,6 +61,22 @@ export default function WaitlistForm() {
       ) : (
         <form onSubmit={handleSubmit}>
           <h3 className="text-2xl font-bold text-brand-text-primary mb-6">Join the Waitlist</h3>
+
+          <div className="mb-4">
+            <label htmlFor="name" className="block text-brand-text-secondary mb-2 text-sm">
+              Name *
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="w-full px-4 py-3 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary focus:outline-none focus:border-brand-accent transition-colors duration-200"
+              placeholder="Your name"
+              disabled={status === 'loading'}
+            />
+          </div>
 
           <div className="mb-4">
             <label htmlFor="email" className="block text-brand-text-secondary mb-2 text-sm">

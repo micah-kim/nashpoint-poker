@@ -4,7 +4,15 @@ import { neon } from '@neondatabase/serverless'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, notes } = body
+    const { name, email, notes } = body
+
+    // Validate name
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Name is required' },
+        { status: 400 }
+      )
+    }
 
     // Validate email
     if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -31,11 +39,12 @@ export async function POST(request: NextRequest) {
 
     // Insert new waitlist entry
     await sql`
-      INSERT INTO waitlist (email, notes) VALUES (${email.toLowerCase().trim()}, ${notes?.trim() || ''})
+      INSERT INTO waitlist (name, email, notes) VALUES (${name.trim()}, ${email.toLowerCase().trim()}, ${notes?.trim() || ''})
     `
 
     // Log to console
     console.log('📧 New Waitlist Signup:', {
+      name: name.trim(),
       email: email.toLowerCase().trim(),
       notes: notes?.trim() || '',
       timestamp: new Date().toISOString(),
@@ -63,7 +72,7 @@ export async function GET() {
     const sql = neon(process.env.DATABASE_URL!)
     
     const entries = await sql`
-      SELECT id, email, notes, created_at FROM waitlist ORDER BY created_at DESC
+      SELECT id, name, email, notes, created_at FROM waitlist ORDER BY created_at DESC
     `
     
     return NextResponse.json({
