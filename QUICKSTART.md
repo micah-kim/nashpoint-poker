@@ -1,152 +1,46 @@
-# Quick Start Guide
+# Quick Start
 
-## ⚡ Installation & Running
+## 1. Install
 
-### Step 1: Install Dependencies
 ```bash
 npm install
+cp .env.example .env.local
 ```
 
-### Step 2: Run Development Server
+Set `DATABASE_URL` in `.env.local`.
+
+## 2. Run The App
+
 ```bash
 npm run dev
 ```
 
-### Step 3: Open Browser
-Navigate to: http://localhost:3000
+Open `http://localhost:3000`.
 
-## ✅ What's Been Built
+## 3. Know The Main Surfaces
 
-### Pages (4 total)
-- ✅ `/` - Landing page with hero, tools showcase, features, and comparison
-- ✅ `/about` - Vision, approach, roadmap, solver integration info
-- ✅ `/demo` - Non-functional UI mockup of the training tool
-- ✅ `/early-access` - Waitlist signup form
+- `/` - landing page
+- `/about` - product vision and roadmap
+- `/demo` - non-functional product mockup
+- `/early-access` - waitlist form
+- `/api/waitlist` - debug endpoint for current waitlist entries
 
-### Components (8 total)
-- ✅ `Navbar` - Responsive navigation with mobile menu
-- ✅ `Footer` - Links and branding
-- ✅ `Hero` - Clear value prop with tool preview cards
-- ✅ `ToolsSection` - Animated mockups with scroll-triggered demos
-- ✅ `FeatureSection` - 4-card feature grid
-- ✅ `ComparisonSection` - Side-by-side comparison with GTO Wizard
-- ✅ `WaitlistForm` - Email capture with success state
-- ✅ `LoadingScreen` - Animated logo splash on first visit
+## 4. Smoke Test The Waitlist
 
-### API Routes
-- ✅ `POST /api/waitlist` - Stores email signups (in-memory)
-- ✅ `GET /api/waitlist` - View current waitlist (debugging)
+1. Open `http://localhost:3000/early-access`
+2. Submit a test name, email, and optional notes
+3. Confirm success in the UI
+4. Open `http://localhost:3000/api/waitlist` to verify the entry
 
-## 🎨 Design Tokens (Tailwind)
-
-All colors are defined in `tailwind.config.ts`:
-- `brand-primary` - #0C0A09 (warm black)
-- `brand-bg` - #0A0908 (deep warm black background)
-- `brand-accent` - #F97316 (vibrant orange - energy, action)
-- `brand-accent-dark` - #EA580C (dark orange for hover)
-- `brand-accent-gold` - #FBBF24 (bright gold - chips, premium)
-- `brand-surface` - #1C1917 (warm card surface)
-- `brand-surface-elevated` - #292524 (elevated elements)
-- `brand-border` - #44403C (warm subtle borders)
-- `brand-text-primary` - #FAFAF9 (warm white text)
-- `brand-text-secondary` - #A8A29E (warm muted text)
-
-## 📱 Features
-
-✅ Fully responsive (mobile-first)
-✅ Sticky navigation
-✅ Dark theme with warm accents
-✅ Form validation
-✅ Success states
-✅ Hover animations
-✅ TypeScript throughout
-✅ SEO metadata
-
-## 🚀 Deploy to Vercel
-
-### Option 1: Vercel Dashboard
-1. Push code to GitHub
-2. Go to vercel.com
-3. Click "New Project"
-4. Import your repository
-5. Deploy (no configuration needed)
-
-### Option 2: Vercel CLI
-```bash
-npm install -g vercel
-vercel
-```
-
-## 🧪 Test the Waitlist
-
-1. Go to http://localhost:3000/early-access
-2. Enter an email address
-3. Submit the form
-4. Check your terminal for the console log
-5. Try submitting the same email again (should show error)
-6. Visit http://localhost:3000/api/waitlist to see all entries
-
-## 📦 Production Build
+## 5. Validate Before Shipping Changes
 
 ```bash
-npm run build
-npm start
+npm run check
 ```
 
-## 🔍 Verify Everything Works
+## 6. Need More Context?
 
-- [ ] Homepage loads with hero and features
-- [ ] Navigation works (all 4 links)
-- [ ] Mobile menu toggles correctly
-- [ ] About page shows roadmap and info
-- [ ] Demo page displays mockup interface
-- [ ] Early access form submits successfully
-- [ ] Footer links work
-- [ ] All pages are responsive
-
-## 💡 Next Steps (Post-POC)
-
-- Integrate real database (PostgreSQL, MongoDB, etc.)
-- Add email service (SendGrid, Mailchimp, etc.)
-- Implement analytics (Google Analytics, Plausible, etc.)
-- Add actual poker hand mockup images
-- Create logo files
-- Set up custom domain
-- Add contact page
-- Implement blog/updates section
-
-## 🐛 Troubleshooting
-
-### Port already in use
-```bash
-# Kill the process on port 3000
-npx kill-port 3000
-npm run dev
-```
-
-### Dependencies not installing
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Build errors
-```bash
-# Check TypeScript errors
-npx tsc --noEmit
-
-# Check ESLint
-npm run lint
-```
-
-## 📞 Support
-
-For questions about this codebase, refer to:
-- `README.md` - Full documentation
-- `DESIGN_TOKENS.md` - Design system reference
-- `project-specification.md` - Original requirements
-
----
-
-🎉 **You're all set!** The website is ready to deploy.
+- `AGENTS.md` - repo-specific guidance for Codex and other agents
+- `README.md` - setup, architecture, and deployment notes
+- `DESIGN_TOKENS.md` - brand tokens and styling rules
+- `project-specification.md` - scope and product intent

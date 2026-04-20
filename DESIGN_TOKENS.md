@@ -1,7 +1,7 @@
 
 # DESIGN_TOKENS.md
 These are the authoritative design tokens for Nash Point.  
-Copilot: ALWAYS reference this file before changing any styling.
+AI agents: reference this file before changing styling or token names.
 
 ---
 
@@ -44,8 +44,7 @@ brand-border: #44403C (warm borders)
 brand-text-primary: #FAFAF9 (warm white)
 brand-text-secondary: #A8A29E (warm gray)
 
-Copilot:  
-When the user asks to “change a color everywhere” — update tokens in `tailwind.config.js` AND reference this file.
+When the user asks to "change a color everywhere," update tokens in `tailwind.config.ts` and keep this file in sync.
 
 ---
 
@@ -89,17 +88,16 @@ import { Icon } from '@/components/ui'
 ---
 
 # ▶ Logo
-Primary logo: `/assets/images/logo.png`  
-The NLR logo features letters in navy blue (#1B3A57) and cyan blue (#00A5E0) with a shattering/particle effect, symbolizing how Nash Point breaks rigid GTO theory to adapt to human irrationality.
+Primary logo: `/public/assets/images/logo.png`
 
-Logo is used in:
-1. `Navbar.tsx` (height: h-10)
-2. `Footer.tsx` (height: h-12)
+Logo is currently used in:
+1. `Navbar.tsx`
+2. `Footer.tsx`
 
-When updating logo:
-1. Replace file at `public/assets/images/logo.png`
-2. Maintain the "shattering" visual metaphor
-3. Keep aspect ratio consistent in components
+When updating the logo:
+1. Replace `public/assets/images/logo.png`
+2. Preserve the asset's current proportions and spacing unless a redesign is requested
+3. Keep usage consistent in shared layout components
 
 ---
 
