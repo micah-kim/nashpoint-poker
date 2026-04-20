@@ -62,6 +62,7 @@ nashpoint-poker/
 │   └── hooks.ts                  # Shared React hooks
 │
 ├── 📚 Documentation
+│   ├── AGENTS.md                 # Codex-first repo guidance
 │   ├── README.md                 # Complete project documentation
 │   ├── QUICKSTART.md             # Quick start guide
 │   ├── PROJECT_COMPLETE.md       # Completion summary
@@ -70,9 +71,9 @@ nashpoint-poker/
 │   ├── project-specification.md  # Original requirements
 │   ├── system-architecture.md    # Future architecture
 │   ├── ui-wireframes.md          # UI wireframes
-│   ├── copilot-prompt.md         # Build instructions
-│   ├── COPILOT_OVERVIEW.md       # Copilot info
-│   └── COPILOT_USAGE_GUIDE.md    # Usage guide
+│   ├── copilot-prompt.md         # Legacy bootstrap prompt
+│   ├── COPILOT_OVERVIEW.md       # Legacy Copilot context
+│   └── COPILOT_USAGE_GUIDE.md    # Legacy prompt patterns
 │
 └── 🚫 Generated (not in repo)
     ├── node_modules/             # Dependencies
@@ -126,9 +127,9 @@ nashpoint-poker/
 ### API Routes
 
 #### `app/api/waitlist/route.ts`
-- POST endpoint for email signups
+- POST endpoint for name/email signups
 - GET endpoint to view waitlist
-- In-memory storage (POC only)
+- Neon-backed storage via `DATABASE_URL`
 - Validation and duplicate checking
 
 ### Components
@@ -172,6 +173,7 @@ nashpoint-poker/
 - Highlighted differences
 
 #### `components/WaitlistForm.tsx`
+- Name input field
 - Email input field
 - Optional notes textarea
 - Form validation

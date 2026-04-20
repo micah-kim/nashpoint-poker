@@ -1,8 +1,10 @@
 
 # COPILOT_OVERVIEW.md
-This document teaches GitHub Copilot how the project is structured, how decisions should be made, where important files live, and how to properly refactor the system.
+Legacy filename from the earlier Copilot workflow.
 
-Copilot: ALWAYS reference this file (along with `DESIGN_TOKENS.md`, `project-specification.md`, and `ui-wireframes.md`) before making changes.
+Current operational instructions live in `AGENTS.md`. Use this file as historical project context, and prefer the current code, `AGENTS.md`, and `README.md` when there is any conflict.
+
+AI agents: reference this file together with `DESIGN_TOKENS.md`, `project-specification.md`, and `ui-wireframes.md` when making product or architecture changes.
 
 ---
 
@@ -31,7 +33,7 @@ Those belong to the future tool described inside `system-architecture.md`.
 
 # ▶ Documentation Update Rules (IMPORTANT)
 
-Copilot: When you make changes to the codebase, you MUST also update the relevant project documents to keep everything synchronized.
+When you make changes to the codebase, update the relevant project documents to keep everything synchronized.
 
 Follow these rules:
 
@@ -61,12 +63,12 @@ Update:
 ## 5. When adding or removing design tokens
 Update:
 - `DESIGN_TOKENS.md`
-- `tailwind.config.js`
+- `tailwind.config.ts`
 
 ---
 
-# ▶ Copilot Responsibility
-Before completing any task, Copilot must:
+# ▶ Agent Responsibility
+Before completing any task, an agent must:
 
 1. **Ask itself**: Does this change impact internal documentation?
 2. **If yes**: Update the relevant `.md` files automatically.
@@ -86,10 +88,10 @@ This ensures the repo remains self‑documenting and maintainable.
 
 ---
 
-# ▶ Directory Structure (source of truth)
+# ▶ Directory Structure (historical map; validate against current code)
 /app
 /api
-/waitlist/route.ts      → API route handling email + notes capture
+/waitlist/route.ts      → API route handling name, email, and notes capture
 /about/page.tsx
 /demo/page.tsx
 /early-access/page.tsx
@@ -112,28 +114,24 @@ validators.ts
 utils.ts
 /public
 /assets
-logo.svg
-logo-dark.svg
-mockup-hand-input.png
-mockup-evaluation.png
+images/logo.png
+images/og-image.png
 
-Copilot:  
-When modifying UI or layout, ALWAYS first consider shared components under `/components`. Avoid duplicating logic or visuals inside each page.
+When modifying UI or layout, first consider shared components under `/components`. Avoid duplicating logic or visuals inside each page.
 
 ---
 
-# ▶ How This Project Wants Copilot to Behave
+# ▶ How This Project Wants Agents to Behave
 
 ## 1. **When updating brand colors**
-- ONLY change the tokens inside `tailwind.config.js`
+- ONLY change the tokens inside `tailwind.config.ts`
 - NEVER update colors inline inside components
 - After updating the config, propagate classes if needed (e.g., replacing old utilities)
 
 ## 2. **When swapping logos**
 Update only:
-- `/public/assets/logo.svg`
-- `/public/assets/logo-dark.svg`
-- Any component usage that shows the logo (`Navbar`, `layout.tsx`)
+- `/public/assets/images/logo.png`
+- Any component usage that shows the logo (`Navbar`, `Footer`)
 
 Do NOT introduce new file paths unless requested.
 
@@ -165,18 +163,16 @@ Do NOT introduce new file paths unless requested.
 ---
 
 # ▶ How to Apply Large-Scale Changes
-Copilot:
-
 When asked to make broad updates:
 
 ### ✦ Color theme change
-1. Update tokens in `tailwind.config.js`
+1. Update tokens in `tailwind.config.ts`
 2. Update any places using old token names
 3. Run through `/components` and `/app` to ensure consistency
 
 ### ✦ Logo swap
-1. Replace `/public/assets/logo.svg`
-2. Check imports in `Navbar.tsx` and `layout.tsx`
+1. Replace `/public/assets/images/logo.png`
+2. Check usage in `Navbar.tsx` and `Footer.tsx`
 
 ### ✦ Adjust typography scale
 1. Modify classes in `globals.css` if defined

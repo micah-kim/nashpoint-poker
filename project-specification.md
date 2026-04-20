@@ -7,7 +7,7 @@ The purpose of the POC is to:
 - Introduce the product concept  
 - Explain competitive advantages vs GTO Wizard  
 - Show example mockups of in‑app features  
-- Collect user email + optional notes for early access  
+- Collect user name, email, and optional notes for early access  
 
 This website is NOT the tool itself.  
 It is a high‑quality landing site, showing what the full tool will become.
@@ -19,8 +19,8 @@ It is a high‑quality landing site, showing what the full tool will become.
 - Modern, tech-forward, professional  
 - Avoid clutter
 - Feel modern & premium  
-- Color scheme: navy blue (#1B3A57), dark backgrounds, cyan blue accents (#00A5E0)
-- Inspired by NLR logo with shattering particle effect
+- Color scheme: warm black backgrounds, vibrant orange accents (#F97316), and gold highlights (#FBBF24)
+- Premium, high-stakes poker atmosphere rather than a generic solver aesthetic
 
 ---
 
@@ -68,6 +68,7 @@ Visitors must immediately understand:
 - How solver integration works (non‑technical explanation)
 
 ### 3. Early Access Page (`/early-access`)
+- Name input
 - Email input  
 - Optional notes/suggestions textarea  
 - Submit button  
@@ -114,18 +115,19 @@ https://gtowizard.com
 
 ---
 
-## Interaction Notes for Copilot
+## Implementation Notes for Codex
 - Always use functional React components  
 - Favor Tailwind utility classes  
 - Prioritize readability + clean structure  
+- Prefer centralized marketing copy in `lib/content.ts` when changing copy across sections
 - Create placeholder mockup images using shadcn/ui cards or simple div blocks  
 - Include polished typography and spacing  
 
 ---
 
-## Deliverables Copilot Should Produce
+## Deliverables The Implementation Should Preserve
 - Full Next.js project structure  
 - All pages + components listed  
 - Tailwind config  
-- API route for capturing email/notes (mock storage)  
+- API route for capturing name/email/notes with Neon-backed storage  
 - Vercel‑ready build  

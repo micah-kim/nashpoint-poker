@@ -1,8 +1,10 @@
 # ✅ PROJECT COMPLETION SUMMARY
 
+This file is a historical snapshot from the initial scaffold. For the current operational source of truth, use `AGENTS.md`, `README.md`, and the code itself.
+
 ## 🎉 Status: COMPLETE
 
-All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully completed!
+All tasks from [copilot-prompt.md](copilot-prompt.md) were successfully completed during the original scaffold.
 
 ## 📦 What Was Built
 
@@ -38,7 +40,7 @@ All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully com
    - Exploitative adjustment display
 
 4. **Early Access Page** (`/early-access`)
-   - Waitlist form (email + notes)
+   - Waitlist form (name + email + notes)
    - Success state confirmation
    - Benefits list
    - Privacy notice
@@ -56,7 +58,7 @@ All tasks from [copilot-prompt.md](copilot-prompt.md) have been successfully com
 
 ### ✅ API Routes
 
-- `POST /api/waitlist` - Stores email signups (in-memory)
+- `POST /api/waitlist` - Stores waitlist signups in Neon Postgres
 - `GET /api/waitlist` - View waitlist (debugging)
 
 ### ✅ Design System
@@ -80,7 +82,7 @@ All design tokens implemented per [DESIGN_TOKENS.md](DESIGN_TOKENS.md):
 ✅ Navigation works (all links functional)
 ✅ Mobile responsive design
 ✅ Waitlist form submits successfully
-✅ API route stores data in memory
+✅ API route stores data in Neon Postgres
 ✅ TypeScript compiled without errors
 ✅ Design tokens applied consistently
 ✅ SEO metadata included
@@ -92,7 +94,7 @@ All design tokens implemented per [DESIGN_TOKENS.md](DESIGN_TOKENS.md):
 ✅ Next.js App Router architecture
 ✅ Fully responsive layouts
 ✅ Email + notes waitlist form
-✅ API route with in-memory storage
+✅ API route with persistent database storage
 ✅ Placeholder UI for all mockups
 ✅ Brand identity (minimalist, warm, elegant, masculine)
 ✅ Deployable to Vercel with zero changes

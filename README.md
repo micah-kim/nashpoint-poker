@@ -1,251 +1,109 @@
-# Nash Point - AI Poker Training
+# Nash Point
 
-A production-ready marketing website for Nash Point, an AI poker training tool inspired by John Nash. Built with Next.js, React, and Tailwind CSS.
+Marketing site for Nash Point, an AI poker training product concept that combines GTO fundamentals with exploitative adjustments.
 
-## 🎯 Project Overview
+## Working With Codex
 
-Nash Point is the **first poker training tool that seamlessly combines GTO and exploitative strategies using AI**.
+Start with `AGENTS.md`. This repo was originally scaffolded during a Copilot-driven phase, so a few legacy Copilot docs still exist for historical context, but `AGENTS.md`, the current code, and the scripts in `package.json` are the operational source of truth.
 
-This proof-of-concept landing site:
-- Introduces Nash Point and its unique approach
-- Showcases the three core tools: Hand Review, Game Simulation, and Quizzes
-- Explains how we combine GTO principles with exploitative play
-- Collects user emails for early access waitlist
+## Tech Stack
 
-### The Three Core Tools
+- Next.js 15 App Router
+- React 19
+- TypeScript
+- Tailwind CSS
+- Lucide React
+- Neon Postgres via `@neondatabase/serverless`
 
-1. **Hand Review** - Input any hand you played, describe your opponents, and get AI-powered feedback combining GTO analysis with exploitative insights
-2. **Game Simulation** - Configure virtual tables with different player types and play realistic sessions with post-game analysis
-3. **Spot Quizzes** - Quick scenario-based training to sharpen decision-making with instant feedback
-
-## 🚀 Tech Stack
-
-- **Next.js 14** (App Router)
-- **React 18**
-- **TypeScript**
-- **Tailwind CSS**
-- **Lucide React** (icons)
-- **Vercel** (deployment ready)
-
-## 📦 Getting Started
-
-### Prerequisites
-
-- Node.js 18+ installed
-- npm or yarn
-
-### Installation
+## Quick Start
 
 1. Install dependencies:
 ```bash
 npm install
 ```
-
-2. Run the development server:
+2. Create a local env file:
+```bash
+cp .env.example .env.local
+```
+3. Set `DATABASE_URL` in `.env.local`.
+4. Start the development server:
 ```bash
 npm run dev
 ```
+5. Open `http://localhost:3000`.
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser
+## Environment Variables
 
-## 🏗️ Project Structure
+- `DATABASE_URL` - required for the waitlist API
+- `NEXT_PUBLIC_BASE_URL` - optional base URL for canonical metadata, sitemap generation, and Open Graph tags
 
-```
-nashpoint-poker/
-├── app/
-│   ├── layout.tsx           # Root layout with Navbar & Footer
-│   ├── page.tsx             # Landing page
-│   ├── globals.css          # Global styles
-│   ├── about/
-│   │   └── page.tsx         # About/Vision page
-│   ├── demo/
-│   │   └── page.tsx         # UI Demo (non-functional mockup)
-│   ├── early-access/
-│   │   └── page.tsx         # Waitlist signup page
-│   └── api/
-│       └── waitlist/
-│           └── route.ts     # Waitlist API endpoint
-├── components/
-│   ├── Navbar.tsx           # Navigation bar
-│   ├── Footer.tsx           # Footer
-│   ├── Hero.tsx             # Hero section
-│   ├── FeatureSection.tsx   # Feature grid
-│   ├── ComparisonSection.tsx # vs GTO Wizard comparison
-│   ├── WaitlistForm.tsx     # Email capture form
-│   ├── ui/                  # Shared UI primitives
-│   │   ├── Button.tsx       # Reusable button
-│   │   ├── Card.tsx         # Reusable card
-│   │   ├── Badge.tsx        # Reusable badge
-│   │   ├── SectionHeading.tsx # Section heading
-│   │   └── Icon.tsx         # Lucide icon wrapper
-│   └── mockups/             # Interactive mockups
-│       ├── HandReviewMockup.tsx
-│       ├── GameSimulationMockup.tsx
-│       └── QuizMockup.tsx
-├── lib/
-│   ├── content.ts           # Centralized marketing copy
-│   └── hooks.ts             # Shared React hooks
-├── tailwind.config.ts       # Tailwind configuration
-├── next.config.js           # Next.js configuration
-└── package.json             # Dependencies
-```
+## Commands
 
-## 🎨 Design System
+- `npm run dev` - start local development
+- `npm run lint` - run ESLint
+- `npm run lint:fix` - auto-fix lintable issues
+- `npm run typecheck` - run TypeScript without emitting files
+- `npm run build` - create a production build
+- `npm run check` - run the full validation flow used during agent work
 
-The site follows a modern, professional brand identity:
+## Project Structure
 
-- **Primary Color**: Navy blue (#1B3A57)
-- **Background**: Dark (#0F1419)
-- **Accent**: Cyan blue (#00A5E0)
-- **Typography**: Inter font family
-- **Icons**: Lucide React (via `<Icon>` component)
+- `app/` - App Router pages, metadata, and the waitlist API route
+- `components/` - page sections, navigation, footer, mockups, and shared UI primitives
+- `lib/content.ts` - centralized marketing copy and structured content
+- `public/assets/images/` - logo and social share images
+- `tailwind.config.ts` - brand tokens used across the site
 
-All design tokens are defined in:
-- `tailwind.config.ts`
-- `DESIGN_TOKENS.md`
+## Key Routes
 
-## 📄 Pages
+- `/` - landing page
+- `/about` - vision and positioning
+- `/demo` - non-functional product mockup
+- `/early-access` - waitlist signup page
+- `/api/waitlist` - waitlist POST plus debug GET endpoint
 
-### Landing Page (`/`)
-- Hero section with clear value proposition and tool previews
-- Tools section with interactive mockups (Hand Review, Game Simulation, Quizzes)
-- Feature grid (4 key differentiators)
-- Comparison with GTO Wizard
+## Waitlist API
 
-### About Page (`/about`)
-- Problem statement
-- Our approach (4 key differentiators)
-- Product roadmap
-- Solver integration explanation
+`POST /api/waitlist`
 
-### Demo Page (`/demo`)
-- Non-functional UI mockup
-- Hand input interface
-- Opponent type selector
-- Mock AI commentary
-- GTO baseline chart
-- Exploitative adjustment display
-
-### Early Access Page (`/early-access`)
-- Waitlist form (email + optional notes)
-- Benefits list
-- Success confirmation
-
-## 🔌 API Routes
-
-### POST `/api/waitlist`
-Stores waitlist signups in Neon Postgres database.
-
-**Request:**
 ```json
 {
+  "name": "Test User",
   "email": "user@example.com",
   "notes": "Optional feedback"
 }
 ```
 
-**Response:**
-```json
-{
-  "message": "Successfully joined the waitlist!",
-  "success": true
-}
-```
+`GET /api/waitlist`
 
-### GET `/api/waitlist`
-Returns current waitlist count and entries from database (for debugging).
+Returns the current entries for development/debugging.
 
-**Database:** Neon Postgres with `@neondatabase/serverless` driver
+Schema setup lives in `schema.sql`, and Neon-specific setup notes live in `NEON_SETUP.md`.
 
-## 🚢 Deployment
+## Design System
 
-### Deploy to Vercel
+The current visual direction is warm, dark, and high-contrast:
 
-1. Push code to GitHub
-2. Import project in Vercel
-3. Deploy with default settings
+- warm black backgrounds
+- orange and gold accents
+- Tailwind `brand-*` tokens defined in `tailwind.config.ts`
 
-Or use Vercel CLI:
-```bash
-npm install -g vercel
-vercel
-```
+Update `DESIGN_TOKENS.md` whenever tokens or brand rules change.
 
-The site is configured to work with zero changes on Vercel.
+## Deployment
 
-## 🛠️ Development
+The app is ready for Vercel. Set the same environment variables in Vercel that you use locally, especially `DATABASE_URL`.
 
-### Build for Production
-```bash
-npm run build
-```
+## Additional Docs
 
-### Start Production Server
-```bash
-npm start
-```
+- `AGENTS.md` - Codex-first working guide
+- `COMMANDS.md` - common development and validation commands
+- `QUICKSTART.md` - shortest path to running the app locally
+- `DESIGN_TOKENS.md` - styling tokens and brand rules
+- `project-specification.md` - product and scope reference
+- `system-architecture.md` - future-state architecture notes
+- `ui-wireframes.md` - layout and content intent
 
-### Lint Code
-```bash
-npm run lint
-```
+## License
 
-## 📝 Notes
-
-- Waitlist data is stored in **Neon Postgres** database
-- Uses `@neondatabase/serverless` driver for serverless deployment
-- All mockups are non-functional placeholders
-- Mobile-first responsive design
-
-## � SEO
-
-The site includes comprehensive SEO optimizations:
-
-- **robots.txt** - Dynamic via `app/robots.ts`
-- **sitemap.xml** - Dynamic via `app/sitemap.ts`
-- **Open Graph tags** - For social sharing (Facebook, LinkedIn)
-- **Twitter Card tags** - For Twitter/X sharing
-- **JSON-LD structured data** - SoftwareApplication schema for rich snippets
-- **Canonical URLs** - Prevent duplicate content issues
-- **Meta keywords** - Poker training related terms
-
-**Environment Variable:**
-- `NEXT_PUBLIC_BASE_URL` - Your production URL (default: `https://nashpoint.ai`)
-
-**Note:** Create an OG image at `public/assets/images/og-image.png` (1200x630px) for social sharing previews.
-
-## �🗄️ Database Setup
-
-The project uses Neon Postgres for waitlist storage.
-
-**Schema:** See `schema.sql` for the database table structure.
-
-**Environment Variable Required:**
-- `DATABASE_URL` - Neon Postgres connection string (stored in `.env.local`)
-
-**To set up the database:**
-1. Create a Neon database (connected via Vercel Storage)
-2. Run the SQL in `schema.sql` using Neon SQL Editor
-3. Add `DATABASE_URL` to `.env.local` and Vercel environment variables
-
-## 📚 Documentation
-
-Additional documentation:
-- `DESIGN_TOKENS.md` - Design system reference
-- `project-specification.md` - Full project requirements
-- `system-architecture.md` - Future tool architecture
-- `ui-wireframes.md` - UI wireframe descriptions
-
-## 🔗 References
-
-- [GTO Wizard](https://gtowizard.com) - Competitive reference
-
-## 📄 License
-
-Private project - All rights reserved
-
----
-
-Built with ♠️ by the Nash Point team
-
-*"The best way to win is to understand both the perfect strategy and why your opponents will never play it perfectly."* - Inspired by John Nash
+Private project. All rights reserved.

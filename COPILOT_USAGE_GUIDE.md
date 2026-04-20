@@ -1,23 +1,25 @@
 
 # COPILOT_USAGE_GUIDE.md
-This guide teaches how to request changes from Copilot clearly and in a way that uses the project’s architecture and tokens.
+Legacy filename from the earlier Copilot workflow.
+
+Use `AGENTS.md` for the current operational guide. This file is still useful as a prompt-pattern reference for repo-specific requests.
 
 ---
 
 # ▶ When adjusting colors
 Example prompt:
 
-“Copilot, update the accent color to #AA8844. Modify the token in `tailwind.config.js` and ensure all references to `brand-accent` propagate correctly.”
+"Codex, update the accent color to #AA8844. Modify the token in `tailwind.config.ts` and ensure all references to `brand-accent` propagate correctly."
 
 ---
 
 # ▶ When replacing the logo
-“Copilot, use `/public/assets/new-logo.svg` as the new default logo. Update all components referencing the old logo and keep dimensions consistent.”
+"Codex, use `/public/assets/new-logo.svg` as the new default logo. Update all components referencing the old logo and keep dimensions consistent."
 
 ---
 
 # ▶ When modifying layout or spacing
-“Copilot, adjust the vertical spacing on the landing page to feel more open. Follow the layout rules from `Hero.tsx` and `FeatureSection.tsx`.”
+"Codex, adjust the vertical spacing on the landing page to feel more open. Follow the layout rules from `Hero.tsx` and `FeatureSection.tsx`."
 
 ---
 
@@ -34,8 +36,8 @@ Example prompt:
 # ▶ When doing large-scale refactors
 Reference architecture:
 
-“Copilot, improve the typography scale across all pages by adjusting classes in shared components. Follow DESIGN_TOKENS.md for the palette.”
+"Codex, improve the typography scale across all pages by adjusting classes in shared components. Follow DESIGN_TOKENS.md for the palette."
 
 ---
 
-Be explicit, reference the architecture files, and Copilot will follow the project conventions accurately.
+Be explicit, reference the architecture files, and Codex will follow the project conventions accurately.
