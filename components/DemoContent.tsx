@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 export default function DemoContent() {
-  const [selectedOpponent, setSelectedOpponent] = useState('TAG')
+  const [selectedOpponent, setSelectedOpponent] = useState('TAG (Tight-Aggressive)')
   const [board, setBoard] = useState('Ks Qh 7d')
   
   return (
@@ -35,10 +35,11 @@ export default function DemoContent() {
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-brand-text-secondary mb-2 text-sm">
+                  <label htmlFor="demo-hand" className="block text-brand-text-secondary mb-2 text-sm">
                     Your Hand
                   </label>
                   <input
+                    id="demo-hand"
                     type="text"
                     value="Ah Kd"
                     readOnly
@@ -46,10 +47,11 @@ export default function DemoContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-brand-text-secondary mb-2 text-sm">
+                  <label htmlFor="demo-board" className="block text-brand-text-secondary mb-2 text-sm">
                     Board
                   </label>
                   <input
+                    id="demo-board"
                     type="text"
                     value={board}
                     onChange={(e) => setBoard(e.target.value)}
@@ -57,10 +59,10 @@ export default function DemoContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-brand-text-secondary mb-2 text-sm">
+                  <label htmlFor="demo-position" className="block text-brand-text-secondary mb-2 text-sm">
                     Position
                   </label>
-                  <select className="w-full px-4 py-2 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary">
+                  <select id="demo-position" className="w-full px-4 py-2 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary">
                     <option>BTN</option>
                     <option>CO</option>
                     <option>MP</option>
@@ -68,10 +70,10 @@ export default function DemoContent() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-brand-text-secondary mb-2 text-sm">
+                  <label htmlFor="demo-action" className="block text-brand-text-secondary mb-2 text-sm">
                     Action
                   </label>
-                  <select className="w-full px-4 py-2 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary">
+                  <select id="demo-action" className="w-full px-4 py-2 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary">
                     <option>Single Raised Pot</option>
                     <option>3-Bet Pot</option>
                     <option>4-Bet Pot</option>
@@ -90,8 +92,9 @@ export default function DemoContent() {
                   <button
                     key={type}
                     onClick={() => setSelectedOpponent(type)}
+                    aria-pressed={selectedOpponent === type}
                     className={`w-full text-left px-4 py-2 rounded-md transition-all duration-200 ${
-                      selectedOpponent === type || (selectedOpponent === 'TAG' && type === 'TAG (Tight-Aggressive)')
+                      selectedOpponent === type
                         ? 'bg-brand-accent text-brand-primary font-semibold'
                         : 'bg-brand-primary text-brand-text-secondary hover:bg-brand-primary/50'
                     }`}

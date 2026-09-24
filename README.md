@@ -43,6 +43,7 @@ npm run dev
 - `npm run lint` - run ESLint
 - `npm run lint:fix` - auto-fix lintable issues
 - `npm run typecheck` - run TypeScript without emitting files
+- `npm run test` - run the Vitest suite
 - `npm run build` - create a production build
 - `npm run check` - run the full validation flow used during agent work
 

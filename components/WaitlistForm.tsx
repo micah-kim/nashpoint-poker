@@ -1,17 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button, Icon } from '@/components/ui'
+import { validateWaitlistFields, type WaitlistFieldErrors } from '@/lib/validation'
 
 export default function WaitlistForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [notes, setNotes] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<WaitlistFieldErrors>({})
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const emailInputRef = useRef<HTMLInputElement>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const errors = validateWaitlistFields(name, email)
+    setFieldErrors(errors)
+
+    if (errors.name) {
+      nameInputRef.current?.focus()
+      return
+    }
+    if (errors.email) {
+      emailInputRef.current?.focus()
+      return
+    }
+
     setStatus('loading')
     setMessage('')
 
@@ -21,7 +39,7 @@ export default function WaitlistForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, notes }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), notes: notes.trim() }),
       })
 
       const data = await response.json()
@@ -32,6 +50,7 @@ export default function WaitlistForm() {
         setName('')
         setEmail('')
         setNotes('')
+        setFieldErrors({})
       } else {
         setStatus('error')
         setMessage(data.error || 'Something went wrong. Please try again.')
@@ -55,6 +74,7 @@ export default function WaitlistForm() {
             onClick={() => {
               setStatus('idle')
               setMessage('')
+              nameInputRef.current?.focus()
             }}
             className="text-brand-accent hover:text-brand-accent/80 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded-sm"
           >
@@ -67,18 +87,35 @@ export default function WaitlistForm() {
 
           <div className="mb-4">
             <label htmlFor="name" className="block text-brand-text-secondary mb-2 text-sm">
-              Name *
+              Name <span aria-hidden="true">*</span>
+              <span className="sr-only">(required)</span>
             </label>
             <input
               type="text"
               id="name"
+              name="name"
+              ref={nameInputRef}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value)
+                if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }))
+              }}
               required
-              className="w-full px-4 py-3 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary focus:outline-none focus:border-brand-accent transition-colors duration-200"
+              aria-required="true"
+              aria-invalid={fieldErrors.name ? 'true' : undefined}
+              aria-describedby={fieldErrors.name ? 'name-error' : undefined}
+              className={`w-full px-4 py-3 bg-brand-primary border rounded-md text-brand-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent transition-colors duration-200 ${
+                fieldErrors.name ? 'border-red-500' : 'border-brand-surface focus:border-brand-accent'
+              }`}
               placeholder="Your name"
               disabled={status === 'loading'}
+              autoComplete="name"
             />
+            {fieldErrors.name && (
+              <p id="name-error" className="mt-2 text-sm text-red-400">
+                {fieldErrors.name}
+              </p>
+            )}
           </div>
 
           <div className="mb-4">
@@ -90,16 +127,32 @@ export default function WaitlistForm() {
               type="email"
               id="email"
               name="email"
+              ref={emailInputRef}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }))
+              }}
               required
               aria-required="true"
-              aria-describedby={status === 'error' ? 'form-error' : undefined}
-              className="w-full px-4 py-3 bg-brand-primary border border-brand-surface rounded-md text-brand-text-primary focus:outline-none focus:border-brand-accent focus-visible:ring-2 focus-visible:ring-brand-accent transition-colors duration-200"
+              aria-invalid={fieldErrors.email ? 'true' : undefined}
+              aria-describedby={
+                [fieldErrors.email && 'email-error', status === 'error' && 'form-error']
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
+              className={`w-full px-4 py-3 bg-brand-primary border rounded-md text-brand-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent transition-colors duration-200 ${
+                fieldErrors.email ? 'border-red-500' : 'border-brand-surface focus:border-brand-accent'
+              }`}
               placeholder="you@example.com"
               disabled={status === 'loading'}
               autoComplete="email"
             />
+            {fieldErrors.email && (
+              <p id="email-error" className="mt-2 text-sm text-red-400">
+                {fieldErrors.email}
+              </p>
+            )}
           </div>
 
           <div className="mb-6">
@@ -119,8 +172,8 @@ export default function WaitlistForm() {
           </div>
 
           {status === 'error' && (
-            <div 
-              id="form-error" 
+            <div
+              id="form-error"
               className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded-md text-red-400 text-sm"
               role="alert"
               aria-live="assertive"

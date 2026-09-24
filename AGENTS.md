@@ -24,7 +24,8 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - `lib/content.ts` for centralized marketing copy
 - `tailwind.config.ts` and `DESIGN_TOKENS.md` for brand tokens and styling rules
 - `app/page.tsx` and the landing-page sections in `components/`
-- `components/WaitlistForm.tsx` and `app/api/waitlist/route.ts` for the signup flow
+- `components/WaitlistForm.tsx`, `app/api/waitlist/route.ts`, and `lib/validation.ts` for the signup flow and its shared validation
+- `lib/validation.test.ts` for the Vitest suite covering that validation logic
 - `system-architecture.md` for future-state context only
 
 ## Working Conventions
@@ -57,6 +58,7 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - `npm run lint`
 - `npm run lint:fix`
 - `npm run typecheck`
+- `npm run test`
 - `npm run build`
 - `npm run check`
 
