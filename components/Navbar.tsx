@@ -2,11 +2,42 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { navLinks } from '@/lib/content'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!isMenuOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMenuOpen(false)
+        menuButtonRef.current?.focus()
+      }
+    }
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(target) &&
+        !menuButtonRef.current?.contains(target)
+      ) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isMenuOpen])
 
   return (
     <nav className="sticky top-0 z-50 bg-brand-primary/95 backdrop-blur-sm border-b border-brand-surface" role="navigation" aria-label="Main navigation">
@@ -39,6 +70,7 @@ export default function Navbar() {
 
           {/* Mobile menu button */}
           <button
+            ref={menuButtonRef}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden text-brand-text-primary p-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
@@ -66,7 +98,7 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden pb-4" id="mobile-menu" role="menu">
+          <div ref={menuRef} className="md:hidden pb-4" id="mobile-menu" role="menu">
             <div className="flex flex-col space-y-4">
               {navLinks.map((link) => (
                 <Link
