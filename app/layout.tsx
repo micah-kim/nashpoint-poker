@@ -84,8 +84,14 @@ export default function RootLayout({
         <JsonLd type="software" />
       </head>
       <body>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-brand-accent focus:px-4 focus:py-2 focus:text-brand-primary focus:font-semibold"
+        >
+          Skip to main content
+        </a>
         <Navbar />
-        <main className="min-h-screen">
+        <main id="main-content" className="min-h-screen">
           {children}
         </main>
         <Footer />

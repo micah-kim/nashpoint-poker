@@ -2,13 +2,21 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { navLinks } from '@/lib/content'
+
+function navLinkClasses(isActive: boolean) {
+  return `transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand-primary rounded-sm ${
+    isActive ? 'text-brand-accent font-semibold' : 'text-brand-text-secondary hover:text-brand-accent'
+  }`
+}
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!isMenuOpen) return
@@ -61,7 +69,8 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand-primary rounded-sm"
+                aria-current={pathname === link.href ? 'page' : undefined}
+                className={navLinkClasses(pathname === link.href)}
               >
                 {link.label}
               </Link>
@@ -104,7 +113,8 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded-sm"
+                  aria-current={pathname === link.href ? 'page' : undefined}
+                  className={navLinkClasses(pathname === link.href)}
                   onClick={() => setIsMenuOpen(false)}
                   role="menuitem"
                 >
