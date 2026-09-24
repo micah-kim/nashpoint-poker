@@ -106,6 +106,16 @@ export const competitorFeatures = [
 ]
 
 // ============================================================================
+// FINAL CTA (end of homepage)
+// ============================================================================
+
+export const finalCtaContent = {
+  title: 'Ready to Play Smarter?',
+  description: 'Join the waitlist and be the first to train with GTO precision plus real exploitative edges.',
+  cta: 'Join the Waitlist',
+}
+
+// ============================================================================
 // ABOUT PAGE
 // ============================================================================
 
