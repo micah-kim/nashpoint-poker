@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { neon } from '@neondatabase/serverless'
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { EMAIL_REGEX } from '@/lib/validation'
 
 // Postgres unique_violation error code, thrown if two requests race past the
 // pre-insert duplicate check above.

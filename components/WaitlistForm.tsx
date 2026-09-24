@@ -2,35 +2,13 @@
 
 import { useRef, useState } from 'react'
 import { Button, Icon } from '@/components/ui'
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-interface FieldErrors {
-  name?: string
-  email?: string
-}
-
-function validate(name: string, email: string): FieldErrors {
-  const errors: FieldErrors = {}
-
-  if (!name.trim()) {
-    errors.name = 'Name is required'
-  }
-
-  if (!email.trim()) {
-    errors.email = 'Email is required'
-  } else if (!EMAIL_REGEX.test(email.trim())) {
-    errors.email = 'Enter a valid email address'
-  }
-
-  return errors
-}
+import { validateWaitlistFields, type WaitlistFieldErrors } from '@/lib/validation'
 
 export default function WaitlistForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [notes, setNotes] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [fieldErrors, setFieldErrors] = useState<WaitlistFieldErrors>({})
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
@@ -40,7 +18,7 @@ export default function WaitlistForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const errors = validate(name, email)
+    const errors = validateWaitlistFields(name, email)
     setFieldErrors(errors)
 
     if (errors.name) {
