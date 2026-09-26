@@ -1,6 +1,7 @@
 'use client'
 
 import { Button, SectionHeading, Icon, type IconName } from '@/components/ui'
+import { demoContent } from '@/lib/content'
 import { useInView } from '@/lib/hooks'
 import { HandReviewMockup, GameSimulationMockup, QuizMockup } from '@/components/mockups'
 import { Check } from 'lucide-react'
@@ -148,9 +149,14 @@ export default function ToolsSection() {
           <p className="text-brand-text-secondary mb-6">
             Be the first to experience these tools when we launch
           </p>
-          <Button href="/early-access" size="lg">
-            Join the Waitlist
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button href="/early-access" size="lg">
+              Join the Waitlist
+            </Button>
+            <Button href="/demo" variant="outline" size="lg">
+              {demoContent.linkCta}
+            </Button>
+          </div>
         </div>
       </div>
     </section>

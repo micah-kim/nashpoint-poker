@@ -23,7 +23,7 @@ nashpoint-poker/
 │   │   └── page.tsx              # About page (/about)
 │   │
 │   ├── demo/
-│   │   └── page.tsx              # Demo page (/demo)
+│   │   └── page.tsx              # Spot trainer page (/demo)
 │   │
 │   ├── early-access/
 │   │   └── page.tsx              # Early access page (/early-access)
@@ -40,7 +40,7 @@ nashpoint-poker/
 │   ├── FeatureSection.tsx        # 4-card feature grid
 │   ├── ComparisonSection.tsx     # vs GTO Wizard comparison
 │   ├── WaitlistForm.tsx          # Email capture form
-│   ├── DemoContent.tsx           # Demo page client component
+│   ├── DemoContent.tsx           # Spot trainer client component
 │   ├── JsonLd.tsx                # JSON-LD structured data for SEO
 │   │
 │   ├── ui/                       # Shared UI primitives
@@ -112,11 +112,11 @@ nashpoint-poker/
 - Solver integration info
 
 #### `app/demo/page.tsx`
-- Non-functional UI mockup
-- Hand input interface
-- Opponent type selector
-- Mock AI commentary
-- GTO strategy charts
+- Interactive spot trainer, rendered by `components/DemoContent.tsx`
+- Three hand-authored spots and five opponent profiles (`lib/spots.ts`)
+- Answers are graded client-side against the EV table (`lib/trainer.ts`)
+- GTO baseline chart, exploitative adjustment panel, and end-of-session summary
+- No API calls and no solver dependency
 
 #### `app/early-access/page.tsx`
 - Waitlist signup form

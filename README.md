@@ -59,7 +59,7 @@ npm run dev
 
 - `/` - landing page
 - `/about` - vision and positioning
-- `/demo` - non-functional product mockup
+- `/demo` - interactive spot trainer (client-side, no backend)
 - `/early-access` - waitlist signup page
 - `/api/waitlist` - waitlist POST plus debug GET endpoint
 
