@@ -116,6 +116,35 @@ export const finalCtaContent = {
 }
 
 // ============================================================================
+// DEMO PAGE (interactive spot trainer)
+// ============================================================================
+
+export const demoContent = {
+  headline: 'Spot Trainer',
+  subheadline: 'Play three real spots against five opponent types and see how the right answer moves.',
+  badge: 'Interactive preview - a small slice of the full trainer',
+  opponentHeading: 'Who are you up against?',
+  opponentHint: 'Switch profiles at any time. The recommended line changes with the read.',
+  baselineHeading: 'GTO Baseline Strategy',
+  exploitHeading: 'Exploitative Adjustment',
+  coachHeading: 'Coach',
+  submitCta: 'Lock in my answer',
+  nextCta: 'Next spot',
+  restartCta: 'Run it again',
+  summaryHeading: 'Session Summary',
+  summaryLead: 'Three spots is a sample. The full trainer runs thousands, tracks your leaks, and tells you which ones actually cost you money.',
+  linkCta: 'Try the Spot Trainer',
+  ctaTitle: 'Want the full version?',
+  ctaDescription: 'Join the waitlist to get hand review, game simulation, and unlimited spot quizzes when we launch.',
+  cta: 'Join the Waitlist',
+  verdicts: {
+    optimal: 'Optimal line',
+    close: 'Close - but there is a better line',
+    mistake: 'That one costs you',
+  },
+}
+
+// ============================================================================
 // ABOUT PAGE
 // ============================================================================
 

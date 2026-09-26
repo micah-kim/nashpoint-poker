@@ -76,16 +76,16 @@ Visitors must immediately understand:
 - **Storage:** Neon Postgres database with `@neondatabase/serverless` driver
 - Features: duplicate prevention, timestamps, persistent storage
 
-### 4. UI Demo Page (`/demo`)
-This is NOT functional.  
-It simply **shows** what the real app could look like.
+### 4. Spot Trainer Demo (`/demo`)
+A playable slice of the product, running entirely in the browser.
 
 Sections:
-- Hand input interface  
-- Opponent type selector  
-- Example AI commentary block  
-- Mock GTO deviation chart  
-- No real API calls
+- Spot panel with hole cards, board, and game-state tags  
+- Opponent profile selector driving the recommended line  
+- Action choice, graded against a hand-authored EV table  
+- GTO baseline frequency chart plus the exploitative adjustment and its EV gain  
+- Session summary and waitlist CTA  
+- **Data:** static, hand-authored teaching numbers. No solver, no API calls, no backend
 
 ### 5. Global Navigation + Footer
 - Sticky top nav  

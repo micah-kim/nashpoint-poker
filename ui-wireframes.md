@@ -49,9 +49,11 @@ Side‑by‑side:
 
 ---
 
-## Demo Page (Mockups Only)
-- Input: cards + board  
-- Dropdown: opponent type  
-- Button: “Evaluate” (non‑functional)  
-- Placeholder commentary box  
-- Placeholder decision chart  
+## Demo Page (Interactive Spot Trainer)
+- Spot panel: street/position/pot tags, hole cards, board  
+- Opponent profile selector (five reads, locked once an answer is submitted)  
+- Action buttons + “Lock in my answer”  
+- Verdict banner with EV given up versus the best line  
+- GTO baseline frequency chart  
+- Exploitative adjustment panel with the read and the EV gained  
+- Session summary: accuracy, spots nailed, EV left on the table  
