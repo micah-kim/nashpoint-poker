@@ -84,7 +84,8 @@ Sections:
 - Opponent profile selector driving the recommended line  
 - Action choice, graded against a hand-authored EV table  
 - GTO baseline frequency chart plus the exploitative adjustment and its EV gain  
-- Session summary and waitlist CTA  
+- Session summary with hand-by-hand review and a biggest-leak callout  
+- Waitlist CTA  
 - **Data:** static, hand-authored teaching numbers. No solver, no API calls, no backend
 
 ### 5. Global Navigation + Footer

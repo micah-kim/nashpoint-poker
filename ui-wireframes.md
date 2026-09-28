@@ -57,3 +57,5 @@ Side‑by‑side:
 - GTO baseline frequency chart  
 - Exploitative adjustment panel with the read and the EV gained  
 - Session summary: accuracy, spots nailed, EV left on the table  
+- Biggest-leak callout, or a clean-sheet note when every line was max-EV  
+- Hand-by-hand review: each spot, the opponent faced, your line vs the best line, and its EV cost  
