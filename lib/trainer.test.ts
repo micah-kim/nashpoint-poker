@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { opponentProfiles, spots } from './spots'
 import {
   CLOSE_ENOUGH_BB,
+  findBiggestLeak,
   getOpponentProfile,
   getRecommendation,
   getSpot,
   gradeAnswer,
+  reviewSession,
   summarizeSession,
 } from './trainer'
 
@@ -152,5 +154,76 @@ describe('summarizeSession', () => {
 
     expect(summary).toMatchObject({ answered: 2, optimal: 1, accuracy: 50 })
     expect(summary.evLost).toBeGreaterThan(0)
+  })
+})
+
+describe('reviewSession', () => {
+  it('returns nothing for an empty session', () => {
+    expect(reviewSession([])).toEqual([])
+  })
+
+  it('resolves ids back into the spot, opponent, and action labels', () => {
+    const [row] = reviewSession([gradeAnswer(riverSpot, 'tag', 'call')])
+
+    expect(row.spot.id).toBe('bb-river-bluffcatch')
+    expect(row.opponent.shortLabel).toBe('TAG')
+    expect(row.chosenLabel).toBe('Call 10bb')
+    expect(row.bestLabel).toBe('Fold')
+  })
+
+  it('preserves the order the spots were played in', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'lag', 'call'),
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+    ])
+
+    expect(rows.map((row) => row.spot.id)).toEqual(['bb-river-bluffcatch', 'btn-cbet-tptk'])
+  })
+
+  it('flags the spots where the read overrides the GTO baseline', () => {
+    const [deviation, noDeviation] = reviewSession([
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+      gradeAnswer(cbetSpot, 'gto', 'bet66'),
+    ])
+
+    expect(deviation.wasDeviation).toBe(true)
+    expect(noDeviation.wasDeviation).toBe(false)
+  })
+
+  it('throws on a grade referencing a spot that no longer exists', () => {
+    const stale = { ...gradeAnswer(cbetSpot, 'tag', 'check'), spotId: 'retired-spot' }
+
+    expect(() => reviewSession([stale])).toThrow(/Unknown spot/)
+  })
+})
+
+describe('findBiggestLeak', () => {
+  it('returns null when every answer was optimal', () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+      gradeAnswer(riverSpot, 'tag', 'fold'),
+    ])
+
+    expect(findBiggestLeak(rows)).toBeNull()
+  })
+
+  it('picks the spot that gave up the most big blinds', () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'reg', 'bet66'),
+      gradeAnswer(riverSpot, 'tag', 'call'),
+    ])
+
+    expect(findBiggestLeak(rows)?.spot.id).toBe('bb-river-bluffcatch')
+  })
+
+  it('keeps the earlier spot when two leaks cost the same', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'tag', 'call'),
+      gradeAnswer(riverSpot, 'tag', 'call'),
+      gradeAnswer(cbetSpot, 'reg', 'bet66'),
+    ])
+    const leak = findBiggestLeak(rows)
+
+    expect(leak).toBe(rows[0])
   })
 })

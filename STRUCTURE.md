@@ -116,6 +116,7 @@ nashpoint-poker/
 - Three hand-authored spots and five opponent profiles (`lib/spots.ts`)
 - Answers are graded client-side against the EV table (`lib/trainer.ts`)
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
+- Session recap replays every graded spot with its biggest leak (`reviewSession`, `findBiggestLeak`)
 - No API calls and no solver dependency
 
 #### `app/early-access/page.tsx`

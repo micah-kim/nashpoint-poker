@@ -50,8 +50,21 @@ export interface Grade {
   verdict: Verdict
   /** Big blinds given up versus the best line against this opponent. */
   evLoss: number
+  spotId: string
+  opponentId: OpponentId
   chosenActionId: string
   bestActionId: string
+}
+
+/** One graded spot, resolved back to the labels needed to review it. */
+export interface ReviewRow {
+  grade: Grade
+  spot: Spot
+  opponent: OpponentProfile
+  chosenLabel: string
+  bestLabel: string
+  /** True when the read moved the answer off the GTO baseline. */
+  wasDeviation: boolean
 }
 
 export interface SessionSummary {
@@ -138,6 +151,8 @@ export function gradeAnswer(spot: Spot, opponentId: OpponentId, chosenActionId: 
   return {
     verdict,
     evLoss,
+    spotId: spot.id,
+    opponentId,
     chosenActionId,
     bestActionId: recommendation.exploitBestActionId,
   }
@@ -152,4 +167,44 @@ export function summarizeSession(grades: Grade[]): SessionSummary {
     accuracy: grades.length === 0 ? 0 : Math.round((optimal / grades.length) * 100),
     evLost: roundBb(grades.reduce((total, grade) => total + grade.evLoss, 0)),
   }
+}
+
+/**
+ * Resolves a session's grades back into reviewable rows.
+ *
+ * `Grade` only stores ids so it stays cheap to keep in state; this is where
+ * those ids turn into the spot, opponent, and action labels the recap renders.
+ */
+export function reviewSession(grades: Grade[]): ReviewRow[] {
+  return grades.map((grade) => {
+    const spot = getSpot(grade.spotId)
+
+    if (!spot) {
+      throw new Error(`Unknown spot: ${grade.spotId}`)
+    }
+
+    const label = (actionId: string) =>
+      spot.actions.find((action) => action.id === actionId)?.label ?? actionId
+
+    return {
+      grade,
+      spot,
+      opponent: getOpponentProfile(grade.opponentId),
+      chosenLabel: label(grade.chosenActionId),
+      bestLabel: label(grade.bestActionId),
+      wasDeviation: getRecommendation(spot, grade.opponentId).isDeviation,
+    }
+  })
+}
+
+/**
+ * The single spot that cost the most big blinds, or null for a clean session.
+ * Ties resolve to the earliest spot so the callout stays stable on replay.
+ */
+export function findBiggestLeak(rows: ReviewRow[]): ReviewRow | null {
+  return rows.reduce<ReviewRow | null>(
+    (worst, row) =>
+      row.grade.evLoss > 0 && (!worst || row.grade.evLoss > worst.grade.evLoss) ? row : worst,
+    null,
+  )
 }

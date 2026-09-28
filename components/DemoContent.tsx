@@ -5,10 +5,13 @@ import { Badge, Button, Card, Icon, PlayingCard } from '@/components/ui'
 import { demoContent } from '@/lib/content'
 import { opponentProfiles, spots, type OpponentId } from '@/lib/spots'
 import {
+  findBiggestLeak,
   getRecommendation,
   gradeAnswer,
+  reviewSession,
   summarizeSession,
   type Grade,
+  type ReviewRow,
   type Verdict,
 } from '@/lib/trainer'
 
@@ -32,7 +35,6 @@ export default function DemoContent() {
 
   const spot = spots[spotIndex]
   const recommendation = useMemo(() => getRecommendation(spot, opponentId), [spot, opponentId])
-  const summary = useMemo(() => summarizeSession(history), [history])
   const isLastSpot = spotIndex === spots.length - 1
 
   const bestRow = recommendation.rows.find((row) => row.isExploitBest)!
@@ -80,13 +82,7 @@ export default function DemoContent() {
         </div>
 
         {isFinished ? (
-          <SessionSummaryPanel
-            accuracy={summary.accuracy}
-            optimal={summary.optimal}
-            answered={summary.answered}
-            evLost={summary.evLost}
-            onRestart={handleRestart}
-          />
+          <SessionSummaryPanel grades={history} onRestart={handleRestart} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left column - the spot and the read */}
@@ -333,39 +329,121 @@ export default function DemoContent() {
 }
 
 interface SessionSummaryPanelProps {
-  accuracy: number
-  optimal: number
-  answered: number
-  evLost: number
+  grades: Grade[]
   onRestart: () => void
 }
 
-function SessionSummaryPanel({ accuracy, optimal, answered, evLost, onRestart }: SessionSummaryPanelProps) {
+function SessionSummaryPanel({ grades, onRestart }: SessionSummaryPanelProps) {
+  const summary = useMemo(() => summarizeSession(grades), [grades])
+  const review = useMemo(() => reviewSession(grades), [grades])
+  const biggestLeak = useMemo(() => findBiggestLeak(review), [review])
+
   return (
-    <Card variant="accent" className="max-w-3xl mx-auto text-center">
-      <h2 className="text-3xl font-bold text-brand-text-primary mb-6">{demoContent.summaryHeading}</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <div>
-          <p className="text-4xl font-bold text-brand-accent tabular-nums">{accuracy}%</p>
-          <p className="text-sm text-brand-text-secondary">Optimal lines</p>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <Card variant="accent" className="text-center">
+        <h2 className="text-3xl font-bold text-brand-text-primary mb-6">{demoContent.summaryHeading}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div>
+            <p className="text-4xl font-bold text-brand-accent tabular-nums">{summary.accuracy}%</p>
+            <p className="text-sm text-brand-text-secondary">Optimal lines</p>
+          </div>
+          <div>
+            <p className="text-4xl font-bold text-brand-text-primary tabular-nums">
+              {summary.optimal}/{summary.answered}
+            </p>
+            <p className="text-sm text-brand-text-secondary">Spots nailed</p>
+          </div>
+          <div>
+            <p className="text-4xl font-bold text-brand-text-primary tabular-nums">
+              {formatBb(-summary.evLost)}
+            </p>
+            <p className="text-sm text-brand-text-secondary">EV left on the table</p>
+          </div>
         </div>
-        <div>
-          <p className="text-4xl font-bold text-brand-text-primary tabular-nums">
-            {optimal}/{answered}
+        <p className="text-brand-text-secondary mb-8 max-w-xl mx-auto">{demoContent.summaryLead}</p>
+        <Button variant="outline" onClick={onRestart}>
+          {demoContent.restartCta}
+        </Button>
+      </Card>
+
+      {biggestLeak ? (
+        <Card className="border border-red-600/40 bg-red-900/10">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="scale" size="sm" className="text-red-400" />
+            <h3 className="font-semibold text-brand-text-primary">{demoContent.leakHeading}</h3>
+            <span className="text-sm text-red-400 tabular-nums">
+              {formatBb(-biggestLeak.grade.evLoss)}
+            </span>
+          </div>
+          <p className="text-sm text-brand-text-secondary">
+            <span className="text-brand-text-primary font-semibold">{biggestLeak.spot.title}</span> vs{' '}
+            {biggestLeak.opponent.shortLabel}: you chose {biggestLeak.chosenLabel}, but{' '}
+            <span className="text-brand-accent font-semibold">{biggestLeak.bestLabel}</span> is the
+            highest-EV line against that read.
           </p>
-          <p className="text-sm text-brand-text-secondary">Spots nailed</p>
+        </Card>
+      ) : (
+        <Card className="border border-green-600/40 bg-green-900/10">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="check" size="sm" className="text-green-400" />
+            <h3 className="font-semibold text-brand-text-primary">{demoContent.cleanSheetHeading}</h3>
+          </div>
+          <p className="text-sm text-brand-text-secondary">{demoContent.cleanSheetNote}</p>
+        </Card>
+      )}
+
+      <Card>
+        <h3 className="text-xl font-bold text-brand-text-primary mb-1">{demoContent.reviewHeading}</h3>
+        <p className="text-xs text-brand-text-secondary mb-4">{demoContent.reviewHint}</p>
+        <ol className="space-y-3">
+          {review.map((row, index) => (
+            <ReviewListItem key={`${row.spot.id}-${index}`} row={row} index={index} />
+          ))}
+        </ol>
+      </Card>
+    </div>
+  )
+}
+
+interface ReviewListItemProps {
+  row: ReviewRow
+  index: number
+}
+
+function ReviewListItem({ row, index }: ReviewListItemProps) {
+  const styles = verdictStyles[row.grade.verdict]
+  const isOptimal = row.grade.verdict === 'optimal'
+
+  return (
+    <li className="bg-brand-primary rounded-md p-4">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <Icon name={styles.icon} size="sm" className={`${styles.text} mt-0.5 shrink-0`} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-brand-text-primary">
+              {index + 1}. {row.spot.title}
+            </p>
+            <p className="text-xs text-brand-text-secondary">
+              {row.spot.street} &middot; vs {row.opponent.shortLabel}
+              {row.wasDeviation && ' \u00b7 read overrides the baseline'}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-4xl font-bold text-brand-text-primary tabular-nums">
-            {formatBb(-evLost)}
-          </p>
-          <p className="text-sm text-brand-text-secondary">EV left on the table</p>
-        </div>
+        <span className={`text-sm font-semibold tabular-nums shrink-0 ${styles.text}`}>
+          {isOptimal ? formatBb(0) : formatBb(-row.grade.evLoss)}
+        </span>
       </div>
-      <p className="text-brand-text-secondary mb-8 max-w-xl mx-auto">{demoContent.summaryLead}</p>
-      <Button variant="outline" onClick={onRestart}>
-        {demoContent.restartCta}
-      </Button>
-    </Card>
+      <p className="text-sm text-brand-text-secondary pl-6">
+        You played <span className="text-brand-text-primary">{row.chosenLabel}</span>
+        {isOptimal ? (
+          <> &mdash; the max-EV line.</>
+        ) : (
+          <>
+            {' '}
+            &middot; best was <span className="text-brand-accent font-semibold">{row.bestLabel}</span>
+          </>
+        )}
+      </p>
+    </li>
   )
 }
