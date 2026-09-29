@@ -59,7 +59,10 @@ nashpoint-poker/
 │
 ├── 📚 Lib (Utilities & Content)
 │   ├── content.ts                # Centralized marketing copy & data
-│   └── hooks.ts                  # Shared React hooks
+│   ├── hooks.ts                  # Shared React hooks
+│   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
+│   ├── trainer.ts                # Grading, drill dealing, and session review logic
+│   └── validation.ts             # Shared waitlist validation
 │
 ├── 📚 Documentation
 │   ├── AGENTS.md                 # Codex-first repo guidance
@@ -114,9 +117,11 @@ nashpoint-poker/
 #### `app/demo/page.tsx`
 - Interactive spot trainer, rendered by `components/DemoContent.tsx`
 - Three hand-authored spots and five opponent profiles (`lib/spots.ts`)
+- Two modes: pick the read yourself, or take a dealt drill of five random spot/read pairings (`buildDrill`)
 - Answers are graded client-side against the EV table (`lib/trainer.ts`)
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
 - Session recap replays every graded spot with its biggest leak (`reviewSession`, `findBiggestLeak`)
+- Per-read breakdown names the opponent types you lost the most to (`summarizeByOpponent`)
 - No API calls and no solver dependency
 
 #### `app/early-access/page.tsx`

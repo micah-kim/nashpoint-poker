@@ -5,12 +5,16 @@ import { Badge, Button, Card, Icon, PlayingCard } from '@/components/ui'
 import { demoContent } from '@/lib/content'
 import { opponentProfiles, spots, type OpponentId } from '@/lib/spots'
 import {
+  buildDrill,
   findBiggestLeak,
   getRecommendation,
   gradeAnswer,
   reviewSession,
+  summarizeByOpponent,
   summarizeSession,
+  type DealtHand,
   type Grade,
+  type OpponentBreakdown,
   type ReviewRow,
   type Verdict,
 } from '@/lib/trainer'
@@ -22,20 +26,28 @@ const verdictStyles: Record<Verdict, { container: string; text: string; icon: 'c
 }
 
 function formatBb(value: number): string {
-  return `${value > 0 ? '+' : ''}${value.toFixed(2)} BB`
+  // Negating a zero EV loss yields -0, which would render as "-0.00 BB".
+  const signed = value === 0 ? 0 : value
+
+  return `${signed > 0 ? '+' : ''}${signed.toFixed(2)} BB`
 }
 
 export default function DemoContent() {
+  /** A dealt drill, or null while the user is picking the read themselves. */
+  const [drill, setDrill] = useState<DealtHand[] | null>(null)
   const [spotIndex, setSpotIndex] = useState(0)
-  const [opponentId, setOpponentId] = useState<OpponentId>('tag')
+  const [pickedOpponentId, setPickedOpponentId] = useState<OpponentId>('tag')
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
   const [grade, setGrade] = useState<Grade | null>(null)
   const [history, setHistory] = useState<Grade[]>([])
   const [isFinished, setIsFinished] = useState(false)
 
-  const spot = spots[spotIndex]
+  const isDrill = drill !== null
+  const hand = drill ? drill[spotIndex] : { spot: spots[spotIndex], opponentId: pickedOpponentId }
+  const { spot, opponentId } = hand
+  const totalSpots = drill ? drill.length : spots.length
   const recommendation = useMemo(() => getRecommendation(spot, opponentId), [spot, opponentId])
-  const isLastSpot = spotIndex === spots.length - 1
+  const isLastSpot = spotIndex === totalSpots - 1
 
   const bestRow = recommendation.rows.find((row) => row.isExploitBest)!
   const baselineRow = recommendation.rows.find((row) => row.isBaselineBest)!
@@ -60,12 +72,36 @@ export default function DemoContent() {
     setSpotIndex((index) => index + 1)
   }
 
-  function handleRestart() {
+  function resetSession() {
     setSpotIndex(0)
     setSelectedActionId(null)
     setGrade(null)
     setHistory([])
     setIsFinished(false)
+  }
+
+  /**
+   * Seeded from the clock inside the handler, never during render -- a random
+   * deal computed on the server would not match the client on hydration.
+   */
+  function startDrill() {
+    setDrill(buildDrill(Date.now()))
+    resetSession()
+  }
+
+  function startExplore() {
+    setDrill(null)
+    resetSession()
+  }
+
+  /** "Run it again" re-deals in drill mode, so a replay is a new set of hands. */
+  function handleRestart() {
+    if (isDrill) {
+      startDrill()
+      return
+    }
+
+    resetSession()
   }
 
   return (
@@ -81,8 +117,40 @@ export default function DemoContent() {
           <Badge variant="warning">{demoContent.badge}</Badge>
         </div>
 
+        {!isFinished && (
+          <Card variant="elevated" className="max-w-3xl mx-auto mb-10">
+            <p className="text-xs uppercase tracking-wide text-brand-text-secondary mb-3">
+              {demoContent.modeHeading}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <ModeOption
+                icon="target"
+                label={demoContent.exploreModeLabel}
+                hint={demoContent.exploreModeHint}
+                isActive={!isDrill}
+                // Already picking the read: nothing to do, so a stray click cannot wipe a session.
+                onSelect={() => isDrill && startExplore()}
+              />
+              <ModeOption
+                icon="dice"
+                label={demoContent.drillModeLabel}
+                hint={demoContent.drillModeHint}
+                isActive={isDrill}
+                // Always deals, so this re-deals mid-drill rather than going inert.
+                onSelect={startDrill}
+              />
+            </div>
+            <p className="text-xs text-brand-text-secondary mt-3">{demoContent.modeSwitchNote}</p>
+          </Card>
+        )}
+
         {isFinished ? (
-          <SessionSummaryPanel grades={history} onRestart={handleRestart} />
+          <SessionSummaryPanel
+            grades={history}
+            isDrill={isDrill}
+            onRestart={handleRestart}
+            onSwitchMode={isDrill ? startExplore : startDrill}
+          />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left column - the spot and the read */}
@@ -91,7 +159,7 @@ export default function DemoContent() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-brand-text-primary">The Spot</h2>
                   <span className="text-xs text-brand-text-secondary">
-                    Spot {spotIndex + 1}/{spots.length}
+                    Spot {spotIndex + 1}/{totalSpots}
                   </span>
                 </div>
 
@@ -126,27 +194,38 @@ export default function DemoContent() {
 
               <Card>
                 <h2 className="text-xl font-bold text-brand-text-primary mb-2">
-                  {demoContent.opponentHeading}
+                  {isDrill ? demoContent.dealtOpponentHeading : demoContent.opponentHeading}
                 </h2>
-                <p className="text-xs text-brand-text-secondary mb-4">{demoContent.opponentHint}</p>
-                <div className="space-y-2">
-                  {opponentProfiles.map((profile) => (
-                    <button
-                      key={profile.id}
-                      type="button"
-                      onClick={() => setOpponentId(profile.id)}
-                      aria-pressed={opponentId === profile.id}
-                      disabled={grade !== null}
-                      className={`w-full text-left px-4 py-2 rounded-md transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
-                        opponentId === profile.id
-                          ? 'bg-brand-accent text-brand-primary font-semibold'
-                          : 'bg-brand-primary text-brand-text-secondary hover:bg-brand-primary/50'
-                      }`}
-                    >
-                      {profile.label}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-xs text-brand-text-secondary mb-4">
+                  {isDrill ? demoContent.dealtOpponentHint : demoContent.opponentHint}
+                </p>
+                {isDrill ? (
+                  <div className="flex items-center gap-2 bg-brand-accent/15 border border-brand-accent rounded-md px-4 py-3">
+                    <Icon name="dice" size="sm" className="text-brand-accent shrink-0" />
+                    <span className="font-semibold text-brand-accent">
+                      {recommendation.opponent.label}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {opponentProfiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => setPickedOpponentId(profile.id)}
+                        aria-pressed={opponentId === profile.id}
+                        disabled={grade !== null}
+                        className={`w-full text-left px-4 py-2 rounded-md transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                          opponentId === profile.id
+                            ? 'bg-brand-accent text-brand-primary font-semibold'
+                            : 'bg-brand-primary text-brand-text-secondary hover:bg-brand-primary/50'
+                        }`}
+                      >
+                        {profile.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-brand-text-secondary mt-4">{recommendation.opponent.summary}</p>
               </Card>
             </div>
@@ -330,13 +409,16 @@ export default function DemoContent() {
 
 interface SessionSummaryPanelProps {
   grades: Grade[]
+  isDrill: boolean
   onRestart: () => void
+  onSwitchMode: () => void
 }
 
-function SessionSummaryPanel({ grades, onRestart }: SessionSummaryPanelProps) {
+function SessionSummaryPanel({ grades, isDrill, onRestart, onSwitchMode }: SessionSummaryPanelProps) {
   const summary = useMemo(() => summarizeSession(grades), [grades])
   const review = useMemo(() => reviewSession(grades), [grades])
   const biggestLeak = useMemo(() => findBiggestLeak(review), [review])
+  const byOpponent = useMemo(() => summarizeByOpponent(review), [review])
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -361,9 +443,14 @@ function SessionSummaryPanel({ grades, onRestart }: SessionSummaryPanelProps) {
           </div>
         </div>
         <p className="text-brand-text-secondary mb-8 max-w-xl mx-auto">{demoContent.summaryLead}</p>
-        <Button variant="outline" onClick={onRestart}>
-          {demoContent.restartCta}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button variant="outline" onClick={onRestart}>
+            {isDrill ? demoContent.newDrillCta : demoContent.restartCta}
+          </Button>
+          <Button variant="outline" onClick={onSwitchMode}>
+            {isDrill ? demoContent.pickReadCta : demoContent.drillModeLabel}
+          </Button>
+        </div>
       </Card>
 
       {biggestLeak ? (
@@ -391,6 +478,16 @@ function SessionSummaryPanel({ grades, onRestart }: SessionSummaryPanelProps) {
           <p className="text-sm text-brand-text-secondary">{demoContent.cleanSheetNote}</p>
         </Card>
       )}
+
+      <Card>
+        <h3 className="text-xl font-bold text-brand-text-primary mb-1">{demoContent.byReadHeading}</h3>
+        <p className="text-xs text-brand-text-secondary mb-4">{demoContent.byReadHint}</p>
+        <ul className="space-y-2">
+          {byOpponent.map((breakdown) => (
+            <OpponentBreakdownItem key={breakdown.opponent.id} breakdown={breakdown} />
+          ))}
+        </ul>
+      </Card>
 
       <Card>
         <h3 className="text-xl font-bold text-brand-text-primary mb-1">{demoContent.reviewHeading}</h3>
@@ -444,6 +541,70 @@ function ReviewListItem({ row, index }: ReviewListItemProps) {
           </>
         )}
       </p>
+    </li>
+  )
+}
+
+interface ModeOptionProps {
+  icon: 'target' | 'dice'
+  label: string
+  hint: string
+  isActive: boolean
+  onSelect: () => void
+}
+
+function ModeOption({ icon, label, hint, isActive, onSelect }: ModeOptionProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={isActive}
+      className={`text-left p-4 rounded-md border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+        isActive
+          ? 'bg-brand-accent/15 border-brand-accent'
+          : 'bg-brand-primary border-transparent hover:border-brand-accent/40'
+      }`}
+    >
+      <span className="flex items-center gap-2 mb-1">
+        <Icon
+          name={icon}
+          size="sm"
+          className={isActive ? 'text-brand-accent' : 'text-brand-text-secondary'}
+        />
+        <span className={`font-semibold ${isActive ? 'text-brand-accent' : 'text-brand-text-primary'}`}>
+          {label}
+        </span>
+      </span>
+      <span className="block text-xs text-brand-text-secondary">{hint}</span>
+    </button>
+  )
+}
+
+interface OpponentBreakdownItemProps {
+  breakdown: OpponentBreakdown
+}
+
+function OpponentBreakdownItem({ breakdown }: OpponentBreakdownItemProps) {
+  const isClean = breakdown.evLost <= 0
+
+  return (
+    <li className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-brand-text-primary truncate">
+          {breakdown.opponent.label}
+        </p>
+        <p className="text-xs text-brand-text-secondary">
+          {breakdown.optimal}/{breakdown.answered} optimal
+          {breakdown.testedDeviation && ` · ${demoContent.byReadDeviationNote}`}
+        </p>
+      </div>
+      <span
+        className={`text-sm font-semibold tabular-nums shrink-0 ${
+          isClean ? 'text-green-400' : 'text-red-400'
+        }`}
+      >
+        {formatBb(-breakdown.evLost)}
+      </span>
     </li>
   )
 }

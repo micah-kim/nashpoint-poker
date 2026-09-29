@@ -3,10 +3,10 @@ import DemoContent from '@/components/DemoContent'
 
 export const metadata: Metadata = {
   title: 'Demo - Play the Spot Trainer',
-  description: 'Play three real poker spots against five opponent types. See the GTO baseline, the exploitative adjustment, and what each decision is worth in big blinds.',
+  description: 'Play real poker spots against five opponent types, or take a randomly dealt drill. See the GTO baseline, the exploitative adjustment, and what each decision is worth in big blinds.',
   openGraph: {
     title: 'Nash Point Demo - Play the Spot Trainer',
-    description: 'Three spots, five opponent types, and the EV behind every line.',
+    description: 'Pick your read or take a dealt drill. Five opponent types and the EV behind every line.',
   },
 }
 

@@ -79,12 +79,17 @@ Visitors must immediately understand:
 ### 4. Spot Trainer Demo (`/demo`)
 A playable slice of the product, running entirely in the browser.
 
+Two training modes:
+- **Pick the read** - walk the authored spots against an opponent you choose
+- **Deal me a drill** - five randomly dealt spot/read pairings you do not get to choose
+
 Sections:
+- Mode selector  
 - Spot panel with hole cards, board, and game-state tags  
-- Opponent profile selector driving the recommended line  
+- Opponent profile selector, or the dealt read in drill mode  
 - Action choice, graded against a hand-authored EV table  
 - GTO baseline frequency chart plus the exploitative adjustment and its EV gain  
-- Session summary with hand-by-hand review and a biggest-leak callout  
+- Session summary with hand-by-hand review, a per-read breakdown, and a biggest-leak callout  
 - Waitlist CTA  
 - **Data:** static, hand-authored teaching numbers. No solver, no API calls, no backend
 
