@@ -208,3 +208,103 @@ export function findBiggestLeak(rows: ReviewRow[]): ReviewRow | null {
     null,
   )
 }
+
+/** Hands dealt in one drill. Short enough to finish, long enough to repeat reads. */
+export const DRILL_LENGTH = 5
+
+/** One spot paired with the opponent you have to solve it against. */
+export interface DealtHand {
+  spot: Spot
+  opponentId: OpponentId
+}
+
+/** How a session went against one opponent profile. */
+export interface OpponentBreakdown {
+  opponent: OpponentProfile
+  answered: number
+  optimal: number
+  /** Percentage of spots vs this read answered with the highest-EV line, 0-100. */
+  accuracy: number
+  /** Total big blinds given up against this read. */
+  evLost: number
+  /** True when at least one spot vs this read moved the answer off the baseline. */
+  testedDeviation: boolean
+}
+
+/**
+ * Small seeded PRNG (mulberry32) so a drill is reproducible from its seed.
+ * The demo seeds it from the clock; tests seed it with a constant.
+ */
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0
+
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let value = Math.imul(state ^ (state >>> 15), 1 | state)
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** Fisher-Yates over a copy, so the source array is left alone. */
+function shuffle<T>(items: T[], random: () => number): T[] {
+  const shuffled = [...items]
+
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+
+  return shuffled
+}
+
+/**
+ * Deals a drill: `DRILL_LENGTH` distinct spot/opponent pairings drawn from the
+ * full grid, in random order. Pairings are distinct rather than spots, so the
+ * same spot can come back against a different read -- which is the point, since
+ * that is where the answer moves.
+ */
+export function buildDrill(seed: number): DealtHand[] {
+  const pairings = spots.flatMap((spot) =>
+    opponentProfiles.map((profile) => ({ spot, opponentId: profile.id })),
+  )
+
+  return shuffle(pairings, mulberry32(seed)).slice(0, DRILL_LENGTH)
+}
+
+/**
+ * Groups a session by the opponent faced, worst read first.
+ *
+ * Complements `findBiggestLeak`: that names the single costliest spot, this
+ * names the read you keep losing money to across spots. Ties resolve to the
+ * read faced earlier so the list stays stable across re-renders.
+ */
+export function summarizeByOpponent(rows: ReviewRow[]): OpponentBreakdown[] {
+  const byOpponent = new Map<OpponentId, OpponentBreakdown>()
+
+  for (const row of rows) {
+    const existing = byOpponent.get(row.grade.opponentId) ?? {
+      opponent: row.opponent,
+      answered: 0,
+      optimal: 0,
+      accuracy: 0,
+      evLost: 0,
+      testedDeviation: false,
+    }
+
+    byOpponent.set(row.grade.opponentId, {
+      ...existing,
+      answered: existing.answered + 1,
+      optimal: existing.optimal + (row.grade.verdict === 'optimal' ? 1 : 0),
+      evLost: roundBb(existing.evLost + row.grade.evLoss),
+      testedDeviation: existing.testedDeviation || row.wasDeviation,
+    })
+  }
+
+  return [...byOpponent.values()]
+    .map((breakdown) => ({
+      ...breakdown,
+      accuracy: Math.round((breakdown.optimal / breakdown.answered) * 100),
+    }))
+    .sort((a, b) => b.evLost - a.evLost)
+}

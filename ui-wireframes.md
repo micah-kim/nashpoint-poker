@@ -50,12 +50,16 @@ Side‑by‑side:
 ---
 
 ## Demo Page (Interactive Spot Trainer)
+- Mode selector: "Pick the read" vs "Deal me a drill" (switching starts a fresh session)  
 - Spot panel: street/position/pot tags, hole cards, board  
-- Opponent profile selector (five reads, locked once an answer is submitted)  
+- Pick-the-read mode: opponent profile selector (five reads, locked once an answer is submitted)  
+- Drill mode: the dealt read, shown read-only -- five randomly paired spot/read hands  
 - Action buttons + “Lock in my answer”  
 - Verdict banner with EV given up versus the best line  
 - GTO baseline frequency chart  
 - Exploitative adjustment panel with the read and the EV gained  
 - Session summary: accuracy, spots nailed, EV left on the table  
 - Biggest-leak callout, or a clean-sheet note when every line was max-EV  
+- Per-read breakdown: each opponent faced, spots optimal, EV lost, worst read first  
 - Hand-by-hand review: each spot, the opponent faced, your line vs the best line, and its EV cost  
+- Restart controls: re-run / re-deal, plus a switch to the other mode  

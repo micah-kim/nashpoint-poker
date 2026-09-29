@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { opponentProfiles, spots } from './spots'
 import {
+  buildDrill,
   CLOSE_ENOUGH_BB,
+  DRILL_LENGTH,
   findBiggestLeak,
   getOpponentProfile,
   getRecommendation,
   getSpot,
   gradeAnswer,
   reviewSession,
+  summarizeByOpponent,
   summarizeSession,
 } from './trainer'
 
@@ -225,5 +228,104 @@ describe('findBiggestLeak', () => {
     const leak = findBiggestLeak(rows)
 
     expect(leak).toBe(rows[0])
+  })
+})
+
+describe('buildDrill', () => {
+  it('deals the advertised number of hands', () => {
+    expect(buildDrill(1)).toHaveLength(DRILL_LENGTH)
+  })
+
+  it('is reproducible from its seed', () => {
+    const key = (hand: { spot: { id: string }; opponentId: string }) =>
+      `${hand.spot.id}/${hand.opponentId}`
+
+    expect(buildDrill(42).map(key)).toEqual(buildDrill(42).map(key))
+  })
+
+  it('deals a different order for a different seed', () => {
+    const key = (hand: { spot: { id: string }; opponentId: string }) =>
+      `${hand.spot.id}/${hand.opponentId}`
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8].map((seed) => buildDrill(seed).map(key).join(','))
+
+    expect(new Set(seeds).size).toBeGreaterThan(1)
+  })
+
+  it('never deals the same spot/opponent pairing twice in one drill', () => {
+    for (const seed of [0, 7, 99, 1234, 987654321]) {
+      const pairings = buildDrill(seed).map((hand) => `${hand.spot.id}/${hand.opponentId}`)
+
+      expect(new Set(pairings).size, `seed ${seed} repeated a pairing`).toBe(pairings.length)
+    }
+  })
+
+  it('only deals pairings the trainer can grade', () => {
+    for (const hand of buildDrill(2026)) {
+      expect(spots).toContain(hand.spot)
+      expect(() => gradeAnswer(hand.spot, hand.opponentId, hand.spot.actions[0].id)).not.toThrow()
+    }
+  })
+})
+
+describe('summarizeByOpponent', () => {
+  it('returns nothing for an empty session', () => {
+    expect(summarizeByOpponent([])).toEqual([])
+  })
+
+  it('aggregates every spot played against the same read', () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'tag', 'bet66'),
+      gradeAnswer(riverSpot, 'tag', 'call'),
+    ])
+    const [tag] = summarizeByOpponent(rows)
+
+    expect(tag.opponent.id).toBe('tag')
+    expect(tag).toMatchObject({ answered: 2, optimal: 1, accuracy: 50 })
+    expect(tag.evLost).toBeGreaterThan(0)
+  })
+
+  it('keeps one row per read faced', () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+      gradeAnswer(riverSpot, 'lag', 'call'),
+      gradeAnswer(cbetSpot, 'fish', 'check'),
+    ])
+
+    expect(summarizeByOpponent(rows).map((row) => row.opponent.id)).toEqual(['fish', 'lag'])
+  })
+
+  it('puts the read that cost the most first', () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'reg', 'bet66'),
+      gradeAnswer(riverSpot, 'tag', 'call'),
+    ])
+
+    expect(summarizeByOpponent(rows)[0].opponent.id).toBe('tag')
+  })
+
+  it('keeps the read faced earlier when two cost the same', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'lag', 'call'),
+      gradeAnswer(cbetSpot, 'gto', 'bet66'),
+    ])
+
+    expect(summarizeByOpponent(rows).map((row) => row.opponent.id)).toEqual(['lag', 'gto'])
+  })
+
+  it('flags the reads that demanded a deviation from the baseline', () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+      gradeAnswer(cbetSpot, 'gto', 'bet66'),
+    ])
+    const byOpponent = summarizeByOpponent(rows)
+
+    expect(byOpponent.find((row) => row.opponent.id === 'fish')?.testedDeviation).toBe(true)
+    expect(byOpponent.find((row) => row.opponent.id === 'gto')?.testedDeviation).toBe(false)
+  })
+
+  it('reports a clean run against a read as no EV lost', () => {
+    const rows = reviewSession([gradeAnswer(cbetSpot, 'fish', 'overbet')])
+
+    expect(summarizeByOpponent(rows)[0]).toMatchObject({ accuracy: 100, evLost: 0 })
   })
 })
