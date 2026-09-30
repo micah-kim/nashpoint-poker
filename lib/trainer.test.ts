@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { opponentProfiles, spots } from './spots'
 import {
   buildDrill,
+  buildRetryDrill,
   CLOSE_ENOUGH_BB,
   DRILL_LENGTH,
   findBiggestLeak,
@@ -327,5 +328,98 @@ describe('summarizeByOpponent', () => {
     const rows = reviewSession([gradeAnswer(cbetSpot, 'fish', 'overbet')])
 
     expect(summarizeByOpponent(rows)[0]).toMatchObject({ accuracy: 100, evLost: 0 })
+  })
+})
+
+describe('buildRetryDrill', () => {
+  const key = (hand: { spot: { id: string }; opponentId: string }) =>
+    `${hand.spot.id}/${hand.opponentId}`
+
+  it('returns nothing for an empty session', () => {
+    expect(buildRetryDrill([])).toEqual([])
+  })
+
+  it('returns nothing when every answer was optimal', () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+      gradeAnswer(riverSpot, 'tag', 'fold'),
+    ])
+
+    expect(buildRetryDrill(rows)).toEqual([])
+  })
+
+  it('deals only the pairings that gave up EV, in the order they were faced', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'tag', 'call'),
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+      gradeAnswer(cbetSpot, 'lag', 'bet66'),
+    ])
+
+    expect(buildRetryDrill(rows).map(key)).toEqual([
+      'bb-river-bluffcatch/tag',
+      'btn-cbet-tptk/lag',
+    ])
+  })
+
+  it("includes 'close' answers, not just outright mistakes", () => {
+    const rows = reviewSession([gradeAnswer(cbetSpot, 'reg', 'bet66')])
+
+    expect(rows[0].grade.verdict).toBe('close')
+    expect(buildRetryDrill(rows).map(key)).toEqual(['btn-cbet-tptk/reg'])
+  })
+
+  it('deals a repeated pairing once', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'tag', 'call'),
+      gradeAnswer(riverSpot, 'tag', 'raise'),
+    ])
+
+    expect(buildRetryDrill(rows).map(key)).toEqual(['bb-river-bluffcatch/tag'])
+  })
+
+  it('only deals pairings the trainer can grade', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'tag', 'call'),
+      gradeAnswer(cbetSpot, 'lag', 'bet66'),
+    ])
+
+    for (const hand of buildRetryDrill(rows)) {
+      expect(spots).toContain(hand.spot)
+      expect(() => gradeAnswer(hand.spot, hand.opponentId, hand.spot.actions[0].id)).not.toThrow()
+    }
+  })
+
+  it('carries the read that beat you, so the retry poses the same question', () => {
+    const [hand] = buildRetryDrill(reviewSession([gradeAnswer(riverSpot, 'tag', 'call')]))
+
+    expect(hand.opponentId).toBe('tag')
+    expect(getRecommendation(hand.spot, hand.opponentId).exploitBestActionId).toBe('fold')
+  })
+
+  it('empties out once the retried hands are played correctly', () => {
+    const retry = buildRetryDrill(reviewSession([gradeAnswer(riverSpot, 'tag', 'call')]))
+    const replayed = reviewSession(
+      retry.map((hand) =>
+        gradeAnswer(
+          hand.spot,
+          hand.opponentId,
+          getRecommendation(hand.spot, hand.opponentId).exploitBestActionId,
+        ),
+      ),
+    )
+
+    expect(buildRetryDrill(replayed)).toEqual([])
+  })
+
+  it('can also be dealt from a drill that was played badly', () => {
+    const drill = buildDrill(2026)
+    const rows = reviewSession(
+      drill.map((hand) => gradeAnswer(hand.spot, hand.opponentId, hand.spot.actions[0].id)),
+    )
+    const retry = buildRetryDrill(rows)
+
+    expect(retry.length).toBeGreaterThan(0)
+    expect(retry.length).toBeLessThanOrEqual(DRILL_LENGTH)
+    expect(new Set(retry.map(key)).size).toBe(retry.length)
   })
 })

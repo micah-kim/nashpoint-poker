@@ -10,6 +10,7 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - Keep the homepage mockups in `components/mockups/` presentational unless a task explicitly asks for product logic.
 - The `/demo` spot trainer is the one exception: it runs real strategy logic, but only over hand-authored static data in `lib/spots.ts`. Keep it offline -- no solver, no API calls.
 - Drill mode seeds its deal from the clock inside an event handler, never during render. Randomising in render would break hydration.
+- The recap's retry drill re-deals the missed spot/read pairings from the session's own grades, so it stays deterministic.
 - The waitlist flow is the only live backend behavior in this repo.
 
 ## Stack
@@ -27,7 +28,7 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - `tailwind.config.ts` and `DESIGN_TOKENS.md` for brand tokens and styling rules
 - `app/page.tsx` and the landing-page sections in `components/`
 - `components/WaitlistForm.tsx`, `app/api/waitlist/route.ts`, and `lib/validation.ts` for the signup flow and its shared validation
-- `lib/spots.ts` and `lib/trainer.ts` for the `/demo` spot trainer data, grading, drill dealing, and session review
+- `lib/spots.ts` and `lib/trainer.ts` for the `/demo` spot trainer data, grading, drill dealing, retry drills, and session review
 - `lib/validation.test.ts` and `lib/trainer.test.ts` for the Vitest suites covering validation and trainer logic
 - `system-architecture.md` for future-state context only
 

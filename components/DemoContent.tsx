@@ -6,6 +6,7 @@ import { demoContent } from '@/lib/content'
 import { opponentProfiles, spots, type OpponentId } from '@/lib/spots'
 import {
   buildDrill,
+  buildRetryDrill,
   findBiggestLeak,
   getRecommendation,
   gradeAnswer,
@@ -25,6 +26,15 @@ const verdictStyles: Record<Verdict, { container: string; text: string; icon: 'c
   mistake: { container: 'bg-red-900/30 border-red-600/50', text: 'text-red-400', icon: 'scale' },
 }
 
+/** How the current session picks its hands. Drives the labels and the CTAs. */
+type SessionKind = 'explore' | 'drill' | 'retry'
+
+/** A dealt run of hands: a random drill, or a replay of the ones you missed. */
+interface DealtSession {
+  kind: Exclude<SessionKind, 'explore'>
+  hands: DealtHand[]
+}
+
 function formatBb(value: number): string {
   // Negating a zero EV loss yields -0, which would render as "-0.00 BB".
   const signed = value === 0 ? 0 : value
@@ -33,8 +43,8 @@ function formatBb(value: number): string {
 }
 
 export default function DemoContent() {
-  /** A dealt drill, or null while the user is picking the read themselves. */
-  const [drill, setDrill] = useState<DealtHand[] | null>(null)
+  /** A dealt session, or null while the user is picking the read themselves. */
+  const [dealt, setDealt] = useState<DealtSession | null>(null)
   const [spotIndex, setSpotIndex] = useState(0)
   const [pickedOpponentId, setPickedOpponentId] = useState<OpponentId>('tag')
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
@@ -42,15 +52,22 @@ export default function DemoContent() {
   const [history, setHistory] = useState<Grade[]>([])
   const [isFinished, setIsFinished] = useState(false)
 
-  const isDrill = drill !== null
-  const hand = drill ? drill[spotIndex] : { spot: spots[spotIndex], opponentId: pickedOpponentId }
+  const kind: SessionKind = dealt?.kind ?? 'explore'
+  const isDealt = dealt !== null
+  const hand = dealt ? dealt.hands[spotIndex] : { spot: spots[spotIndex], opponentId: pickedOpponentId }
   const { spot, opponentId } = hand
-  const totalSpots = drill ? drill.length : spots.length
+  const totalSpots = dealt ? dealt.hands.length : spots.length
   const recommendation = useMemo(() => getRecommendation(spot, opponentId), [spot, opponentId])
   const isLastSpot = spotIndex === totalSpots - 1
 
   const bestRow = recommendation.rows.find((row) => row.isExploitBest)!
   const baselineRow = recommendation.rows.find((row) => row.isBaselineBest)!
+
+  const opponentCopy = {
+    explore: { heading: demoContent.opponentHeading, hint: demoContent.opponentHint },
+    drill: { heading: demoContent.dealtOpponentHeading, hint: demoContent.dealtOpponentHint },
+    retry: { heading: demoContent.retryOpponentHeading, hint: demoContent.retryOpponentHint },
+  }[kind]
 
   function handleSubmit() {
     if (!selectedActionId || grade) return
@@ -85,18 +102,27 @@ export default function DemoContent() {
    * deal computed on the server would not match the client on hydration.
    */
   function startDrill() {
-    setDrill(buildDrill(Date.now()))
+    setDealt({ kind: 'drill', hands: buildDrill(Date.now()) })
     resetSession()
   }
 
   function startExplore() {
-    setDrill(null)
+    setDealt(null)
     resetSession()
   }
 
-  /** "Run it again" re-deals in drill mode, so a replay is a new set of hands. */
+  /** Deals the hands a finished session gave up EV on, so a leak gets replayed. */
+  function startRetry(hands: DealtHand[]) {
+    setDealt({ kind: 'retry', hands })
+    resetSession()
+  }
+
+  /**
+   * "Run it again" re-deals in drill mode, so a replay is a new set of hands.
+   * A retry replays the same hands instead -- that is the point of drilling them.
+   */
   function handleRestart() {
-    if (isDrill) {
+    if (kind === 'drill') {
       startDrill()
       return
     }
@@ -127,29 +153,32 @@ export default function DemoContent() {
                 icon="target"
                 label={demoContent.exploreModeLabel}
                 hint={demoContent.exploreModeHint}
-                isActive={!isDrill}
+                isActive={kind === 'explore'}
                 // Already picking the read: nothing to do, so a stray click cannot wipe a session.
-                onSelect={() => isDrill && startExplore()}
+                onSelect={() => isDealt && startExplore()}
               />
               <ModeOption
                 icon="dice"
                 label={demoContent.drillModeLabel}
                 hint={demoContent.drillModeHint}
-                isActive={isDrill}
+                isActive={kind === 'drill'}
                 // Always deals, so this re-deals mid-drill rather than going inert.
                 onSelect={startDrill}
               />
             </div>
-            <p className="text-xs text-brand-text-secondary mt-3">{demoContent.modeSwitchNote}</p>
+            <p className="text-xs text-brand-text-secondary mt-3">
+              {kind === 'retry' ? demoContent.retryActiveNote : demoContent.modeSwitchNote}
+            </p>
           </Card>
         )}
 
         {isFinished ? (
           <SessionSummaryPanel
             grades={history}
-            isDrill={isDrill}
+            kind={kind}
             onRestart={handleRestart}
-            onSwitchMode={isDrill ? startExplore : startDrill}
+            onRetry={startRetry}
+            onSwitchMode={kind === 'explore' ? startDrill : startExplore}
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -194,14 +223,16 @@ export default function DemoContent() {
 
               <Card>
                 <h2 className="text-xl font-bold text-brand-text-primary mb-2">
-                  {isDrill ? demoContent.dealtOpponentHeading : demoContent.opponentHeading}
+                  {opponentCopy.heading}
                 </h2>
-                <p className="text-xs text-brand-text-secondary mb-4">
-                  {isDrill ? demoContent.dealtOpponentHint : demoContent.opponentHint}
-                </p>
-                {isDrill ? (
+                <p className="text-xs text-brand-text-secondary mb-4">{opponentCopy.hint}</p>
+                {isDealt ? (
                   <div className="flex items-center gap-2 bg-brand-accent/15 border border-brand-accent rounded-md px-4 py-3">
-                    <Icon name="dice" size="sm" className="text-brand-accent shrink-0" />
+                    <Icon
+                      name={kind === 'retry' ? 'refresh' : 'dice'}
+                      size="sm"
+                      className="text-brand-accent shrink-0"
+                    />
                     <span className="font-semibold text-brand-accent">
                       {recommendation.opponent.label}
                     </span>
@@ -409,16 +440,30 @@ export default function DemoContent() {
 
 interface SessionSummaryPanelProps {
   grades: Grade[]
-  isDrill: boolean
+  kind: SessionKind
   onRestart: () => void
+  onRetry: (hands: DealtHand[]) => void
   onSwitchMode: () => void
 }
 
-function SessionSummaryPanel({ grades, isDrill, onRestart, onSwitchMode }: SessionSummaryPanelProps) {
+const restartCtas: Record<SessionKind, string> = {
+  explore: demoContent.restartCta,
+  drill: demoContent.newDrillCta,
+  retry: demoContent.retryAgainCta,
+}
+
+function SessionSummaryPanel({
+  grades,
+  kind,
+  onRestart,
+  onRetry,
+  onSwitchMode,
+}: SessionSummaryPanelProps) {
   const summary = useMemo(() => summarizeSession(grades), [grades])
   const review = useMemo(() => reviewSession(grades), [grades])
   const biggestLeak = useMemo(() => findBiggestLeak(review), [review])
   const byOpponent = useMemo(() => summarizeByOpponent(review), [review])
+  const retryHands = useMemo(() => buildRetryDrill(review), [review])
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -444,13 +489,21 @@ function SessionSummaryPanel({ grades, isDrill, onRestart, onSwitchMode }: Sessi
         </div>
         <p className="text-brand-text-secondary mb-8 max-w-xl mx-auto">{demoContent.summaryLead}</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          {retryHands.length > 0 && (
+            <Button onClick={() => onRetry(retryHands)}>
+              {demoContent.retryCta} ({retryHands.length})
+            </Button>
+          )}
           <Button variant="outline" onClick={onRestart}>
-            {isDrill ? demoContent.newDrillCta : demoContent.restartCta}
+            {restartCtas[kind]}
           </Button>
           <Button variant="outline" onClick={onSwitchMode}>
-            {isDrill ? demoContent.pickReadCta : demoContent.drillModeLabel}
+            {kind === 'explore' ? demoContent.drillModeLabel : demoContent.pickReadCta}
           </Button>
         </div>
+        {retryHands.length > 0 && (
+          <p className="text-xs text-brand-text-secondary mt-4">{demoContent.retryHint}</p>
+        )}
       </Card>
 
       {biggestLeak ? (

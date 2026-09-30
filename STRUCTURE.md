@@ -61,7 +61,7 @@ nashpoint-poker/
 │   ├── content.ts                # Centralized marketing copy & data
 │   ├── hooks.ts                  # Shared React hooks
 │   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
-│   ├── trainer.ts                # Grading, drill dealing, and session review logic
+│   ├── trainer.ts                # Grading, drill dealing, retry drills, and session review logic
 │   └── validation.ts             # Shared waitlist validation
 │
 ├── 📚 Documentation
@@ -122,6 +122,7 @@ nashpoint-poker/
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
 - Session recap replays every graded spot with its biggest leak (`reviewSession`, `findBiggestLeak`)
 - Per-read breakdown names the opponent types you lost the most to (`summarizeByOpponent`)
+- The recap can re-deal just the hands that gave up EV as a retry drill (`buildRetryDrill`)
 - No API calls and no solver dependency
 
 #### `app/early-access/page.tsx`
