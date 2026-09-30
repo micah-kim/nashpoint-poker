@@ -79,9 +79,10 @@ Visitors must immediately understand:
 ### 4. Spot Trainer Demo (`/demo`)
 A playable slice of the product, running entirely in the browser.
 
-Two training modes:
+Three training modes:
 - **Pick the read** - walk the authored spots against an opponent you choose
 - **Deal me a drill** - five randomly dealt spot/read pairings you do not get to choose
+- **Retry drill** - offered from the recap, replays only the hands that gave up EV
 
 Sections:
 - Mode selector  
@@ -90,6 +91,7 @@ Sections:
 - Action choice, graded against a hand-authored EV table  
 - GTO baseline frequency chart plus the exploitative adjustment and its EV gain  
 - Session summary with hand-by-hand review, a per-read breakdown, and a biggest-leak callout  
+- Retry CTA on the recap that re-deals the missed spot/read pairings  
 - Waitlist CTA  
 - **Data:** static, hand-authored teaching numbers. No solver, no API calls, no backend
 

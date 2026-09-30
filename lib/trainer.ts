@@ -308,3 +308,29 @@ export function summarizeByOpponent(rows: ReviewRow[]): OpponentBreakdown[] {
     }))
     .sort((a, b) => b.evLost - a.evLost)
 }
+
+/**
+ * Deals the pairings a session did not solve: every spot/read the player gave
+ * up big blinds on, in the order they faced them.
+ *
+ * This is the other half of `findBiggestLeak` and `summarizeByOpponent` -- those
+ * name the leaks, this hands them straight back. Pairings are deduplicated
+ * defensively; a single session never repeats one, but `reviewSession` accepts
+ * any grade list. 'Close' answers are included, because giving up EV at all is
+ * what a retry is for.
+ */
+export function buildRetryDrill(rows: ReviewRow[]): DealtHand[] {
+  const hands: DealtHand[] = []
+  const seen = new Set<string>()
+
+  for (const row of rows) {
+    const key = `${row.spot.id}/${row.grade.opponentId}`
+
+    if (row.grade.evLoss > 0 && !seen.has(key)) {
+      seen.add(key)
+      hands.push({ spot: row.spot, opponentId: row.grade.opponentId })
+    }
+  }
+
+  return hands
+}

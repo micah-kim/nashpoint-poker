@@ -62,4 +62,6 @@ Side‑by‑side:
 - Biggest-leak callout, or a clean-sheet note when every line was max-EV  
 - Per-read breakdown: each opponent faced, spots optimal, EV lost, worst read first  
 - Hand-by-hand review: each spot, the opponent faced, your line vs the best line, and its EV cost  
-- Restart controls: re-run / re-deal, plus a switch to the other mode  
+- Retry CTA: "Drill the ones I missed (n)" when any hand gave up EV, replaying just those spot/read pairings  
+- Retry drill: same layout, read shown read-only, mode note explains it is a replay of the missed hands  
+- Restart controls: re-run / re-deal / run the retry hands back, plus a switch to the other mode  
