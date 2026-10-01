@@ -12,6 +12,7 @@ import {
   gradeAnswer,
   reviewSession,
   summarizeByOpponent,
+  summarizeLeakProgress,
   summarizeSession,
 } from './trainer'
 
@@ -421,5 +422,98 @@ describe('buildRetryDrill', () => {
     expect(retry.length).toBeGreaterThan(0)
     expect(retry.length).toBeLessThanOrEqual(DRILL_LENGTH)
     expect(new Set(retry.map(key)).size).toBe(retry.length)
+  })
+})
+
+describe('summarizeLeakProgress', () => {
+  const key = (row: { spot: { id: string }; grade: { opponentId: string } }) =>
+    `${row.spot.id}/${row.grade.opponentId}`
+
+  it('reports nothing for an empty history', () => {
+    expect(summarizeLeakProgress([])).toEqual({ open: [], closed: 0 })
+  })
+
+  it('counts a pairing that gave up EV as open', () => {
+    const progress = summarizeLeakProgress(reviewSession([gradeAnswer(riverSpot, 'tag', 'call')]))
+
+    expect(progress.open.map(key)).toEqual(['bb-river-bluffcatch/tag'])
+    expect(progress.closed).toBe(0)
+  })
+
+  it('closes a pairing once the latest attempt is optimal', () => {
+    const progress = summarizeLeakProgress(
+      reviewSession([gradeAnswer(riverSpot, 'tag', 'call'), gradeAnswer(riverSpot, 'tag', 'fold')]),
+    )
+
+    expect(progress.open).toEqual([])
+    expect(progress.closed).toBe(1)
+  })
+
+  it('reopens a pairing that was once right and is now wrong', () => {
+    const progress = summarizeLeakProgress(
+      reviewSession([gradeAnswer(riverSpot, 'tag', 'fold'), gradeAnswer(riverSpot, 'tag', 'call')]),
+    )
+
+    expect(progress.open.map(key)).toEqual(['bb-river-bluffcatch/tag'])
+    expect(progress.closed).toBe(0)
+  })
+
+  it('does not count a pairing played right from the start as closed', () => {
+    const progress = summarizeLeakProgress(reviewSession([gradeAnswer(riverSpot, 'tag', 'fold')]))
+
+    expect(progress).toEqual({ open: [], closed: 0 })
+  })
+
+  it('tracks the same spot against different reads separately', () => {
+    const progress = summarizeLeakProgress(
+      reviewSession([gradeAnswer(riverSpot, 'tag', 'call'), gradeAnswer(riverSpot, 'lag', 'call')]),
+    )
+
+    expect(progress.open.map(key)).toEqual(['bb-river-bluffcatch/tag'])
+    expect(progress.closed).toBe(0)
+  })
+
+  it('puts the costliest open leak first', () => {
+    const progress = summarizeLeakProgress(
+      reviewSession([gradeAnswer(cbetSpot, 'reg', 'bet66'), gradeAnswer(riverSpot, 'tag', 'call')]),
+    )
+
+    expect(progress.open.map(key)).toEqual([
+      'bb-river-bluffcatch/tag',
+      'btn-cbet-tptk/reg',
+    ])
+  })
+
+  it('keeps the pairing faced earlier when two cost the same', () => {
+    const progress = summarizeLeakProgress(
+      reviewSession([gradeAnswer(cbetSpot, 'reg', 'bet66'), gradeAnswer(riverSpot, 'gto', 'fold')]),
+    )
+
+    expect(progress.open[0].grade.evLoss).toBe(progress.open[1].grade.evLoss)
+    expect(progress.open.map(key)).toEqual([
+      'btn-cbet-tptk/reg',
+      'bb-river-bluffcatch/gto',
+    ])
+  })
+
+  it('counts a close answer as an open leak, matching the retry drill', () => {
+    const rows = reviewSession([gradeAnswer(cbetSpot, 'reg', 'bet66')])
+
+    expect(rows[0].grade.verdict).toBe('close')
+    expect(summarizeLeakProgress(rows).open.map(key)).toEqual(['btn-cbet-tptk/reg'])
+  })
+
+  it('hands its open leaks to buildRetryDrill unchanged', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'tag', 'call'),
+      gradeAnswer(cbetSpot, 'reg', 'bet66'),
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
+    ])
+    const hands = buildRetryDrill(summarizeLeakProgress(rows).open)
+
+    expect(hands.map((hand) => `${hand.spot.id}/${hand.opponentId}`)).toEqual([
+      'bb-river-bluffcatch/tag',
+      'btn-cbet-tptk/reg',
+    ])
   })
 })

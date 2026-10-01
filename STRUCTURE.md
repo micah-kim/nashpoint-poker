@@ -60,8 +60,9 @@ nashpoint-poker/
 ├── 📚 Lib (Utilities & Content)
 │   ├── content.ts                # Centralized marketing copy & data
 │   ├── hooks.ts                  # Shared React hooks
+│   ├── progress.ts               # localStorage training history and career rollup
 │   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
-│   ├── trainer.ts                # Grading, drill dealing, retry drills, and session review logic
+│   ├── trainer.ts                # Grading, drill dealing, retry drills, leak tracking, session review
 │   └── validation.ts             # Shared waitlist validation
 │
 ├── 📚 Documentation
@@ -117,13 +118,15 @@ nashpoint-poker/
 #### `app/demo/page.tsx`
 - Interactive spot trainer, rendered by `components/DemoContent.tsx`
 - Three hand-authored spots and five opponent profiles (`lib/spots.ts`)
-- Two modes: pick the read yourself, or take a dealt drill of five random spot/read pairings (`buildDrill`)
+- Three modes: pick the read yourself, take a dealt drill of five random spot/read pairings (`buildDrill`), or drill the leaks still open from earlier visits
 - Answers are graded client-side against the EV table (`lib/trainer.ts`)
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
 - Session recap replays every graded spot with its biggest leak (`reviewSession`, `findBiggestLeak`)
 - Per-read breakdown names the opponent types you lost the most to (`summarizeByOpponent`)
 - The recap can re-deal just the hands that gave up EV as a retry drill (`buildRetryDrill`)
-- No API calls and no solver dependency
+- Finished sessions are kept in `localStorage` so a returning visitor still has their leaks (`lib/progress.ts`)
+- The career card shows lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open (`summarizeCareer`, `summarizeLeakProgress`)
+- No API calls, no solver dependency, and no account -- history never leaves the browser
 
 #### `app/early-access/page.tsx`
 - Waitlist signup form

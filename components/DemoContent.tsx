@@ -1,9 +1,19 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, Icon, PlayingCard } from '@/components/ui'
 import { demoContent } from '@/lib/content'
 import { opponentProfiles, spots, type OpponentId } from '@/lib/spots'
+import {
+  appendSession,
+  clearHistory,
+  emptyHistory,
+  loadHistory,
+  saveHistory,
+  summarizeCareer,
+  type CareerSummary,
+  type TrainingHistory,
+} from '@/lib/progress'
 import {
   buildDrill,
   buildRetryDrill,
@@ -17,6 +27,7 @@ import {
   type Grade,
   type OpponentBreakdown,
   type ReviewRow,
+  type SessionKind,
   type Verdict,
 } from '@/lib/trainer'
 
@@ -26,13 +37,14 @@ const verdictStyles: Record<Verdict, { container: string; text: string; icon: 'c
   mistake: { container: 'bg-red-900/30 border-red-600/50', text: 'text-red-400', icon: 'scale' },
 }
 
-/** How the current session picks its hands. Drives the labels and the CTAs. */
-type SessionKind = 'explore' | 'drill' | 'retry'
-
 /** A dealt run of hands: a random drill, or a replay of the ones you missed. */
 interface DealtSession {
   kind: Exclude<SessionKind, 'explore'>
   hands: DealtHand[]
+}
+
+function pluralSessions(count: number): string {
+  return count === 1 ? demoContent.careerSessionLabel : demoContent.careerSessionsLabel
 }
 
 function formatBb(value: number): string {
@@ -51,6 +63,20 @@ export default function DemoContent() {
   const [grade, setGrade] = useState<Grade | null>(null)
   const [history, setHistory] = useState<Grade[]>([])
   const [isFinished, setIsFinished] = useState(false)
+  /** Everything this browser has played before, loaded after mount. */
+  const [career, setCareer] = useState<TrainingHistory>(emptyHistory)
+
+  // Storage is client-only, so the first render has to match the server's
+  // empty history and fill in afterwards.
+  useEffect(() => {
+    setCareer(loadHistory())
+  }, [])
+
+  const careerSummary = useMemo(() => summarizeCareer(career), [career])
+  const leakHands = useMemo(
+    () => buildRetryDrill(careerSummary.openLeaks),
+    [careerSummary.openLeaks],
+  )
 
   const kind: SessionKind = dealt?.kind ?? 'explore'
   const isDealt = dealt !== null
@@ -77,11 +103,25 @@ export default function DemoContent() {
     setHistory((previous) => [...previous, result])
   }
 
+  /**
+   * Writes a finished session to the browser's history. Called from the
+   * handler that ends a session rather than from an effect, so a session is
+   * recorded exactly once even though `Date.now()` is involved.
+   */
+  function recordSession(grades: Grade[]) {
+    const next = appendSession(career, { kind, completedAt: Date.now(), grades })
+
+    setCareer(next)
+    saveHistory(next)
+  }
+
   function handleNext() {
     setSelectedActionId(null)
     setGrade(null)
 
     if (isLastSpot) {
+      // `history` already holds this spot's grade; `handleSubmit` appended it.
+      recordSession(history)
       setIsFinished(true)
       return
     }
@@ -118,6 +158,22 @@ export default function DemoContent() {
   }
 
   /**
+   * Deals the leaks still open across every stored session, not just the one
+   * just played. Shares the 'retry' kind with a session recap's retry: same
+   * hands, same read, second look -- only the source of the list differs.
+   */
+  function startLeakDrill() {
+    if (leakHands.length === 0) return
+
+    startRetry(leakHands)
+  }
+
+  function resetHistory() {
+    clearHistory()
+    setCareer(emptyHistory)
+  }
+
+  /**
    * "Run it again" re-deals in drill mode, so a replay is a new set of hands.
    * A retry replays the same hands instead -- that is the point of drilling them.
    */
@@ -148,7 +204,11 @@ export default function DemoContent() {
             <p className="text-xs uppercase tracking-wide text-brand-text-secondary mb-3">
               {demoContent.modeHeading}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div
+              className={`grid grid-cols-1 gap-3 ${
+                leakHands.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+              }`}
+            >
               <ModeOption
                 icon="target"
                 label={demoContent.exploreModeLabel}
@@ -165,10 +225,33 @@ export default function DemoContent() {
                 // Always deals, so this re-deals mid-drill rather than going inert.
                 onSelect={startDrill}
               />
+              {/* Only offered once this browser has leaks to hand back. */}
+              {leakHands.length > 0 && (
+                <ModeOption
+                  icon="refresh"
+                  label={`${demoContent.leakModeLabel} (${leakHands.length})`}
+                  hint={demoContent.leakModeHint}
+                  isActive={kind === 'retry'}
+                  onSelect={startLeakDrill}
+                />
+              )}
             </div>
             <p className="text-xs text-brand-text-secondary mt-3">
               {kind === 'retry' ? demoContent.retryActiveNote : demoContent.modeSwitchNote}
             </p>
+            {careerSummary.sessions > 0 && (
+              <p className="text-xs text-brand-text-secondary mt-2">
+                <span className="text-brand-accent font-semibold">
+                  {demoContent.careerWelcomeBack}:
+                </span>{' '}
+                <span className="tabular-nums">{careerSummary.answered}</span> spots played over{' '}
+                <span className="tabular-nums">{careerSummary.sessions}</span>{' '}
+                {pluralSessions(careerSummary.sessions)} &middot;{' '}
+                <span className="tabular-nums">{careerSummary.accuracy}%</span> optimal &middot;{' '}
+                <span className="tabular-nums">{careerSummary.openLeaks.length}</span> open{' '}
+                {careerSummary.openLeaks.length === 1 ? 'leak' : 'leaks'}
+              </p>
+            )}
           </Card>
         )}
 
@@ -176,9 +259,11 @@ export default function DemoContent() {
           <SessionSummaryPanel
             grades={history}
             kind={kind}
+            career={careerSummary}
             onRestart={handleRestart}
             onRetry={startRetry}
             onSwitchMode={kind === 'explore' ? startDrill : startExplore}
+            onResetHistory={resetHistory}
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -441,9 +526,12 @@ export default function DemoContent() {
 interface SessionSummaryPanelProps {
   grades: Grade[]
   kind: SessionKind
+  /** Lifetime numbers, already including the session being recapped. */
+  career: CareerSummary
   onRestart: () => void
   onRetry: (hands: DealtHand[]) => void
   onSwitchMode: () => void
+  onResetHistory: () => void
 }
 
 const restartCtas: Record<SessionKind, string> = {
@@ -455,9 +543,11 @@ const restartCtas: Record<SessionKind, string> = {
 function SessionSummaryPanel({
   grades,
   kind,
+  career,
   onRestart,
   onRetry,
   onSwitchMode,
+  onResetHistory,
 }: SessionSummaryPanelProps) {
   const summary = useMemo(() => summarizeSession(grades), [grades])
   const review = useMemo(() => reviewSession(grades), [grades])
@@ -532,6 +622,10 @@ function SessionSummaryPanel({
         </Card>
       )}
 
+      {career.sessions > 0 && (
+        <CareerPanel career={career} onRetry={onRetry} onResetHistory={onResetHistory} />
+      )}
+
       <Card>
         <h3 className="text-xl font-bold text-brand-text-primary mb-1">{demoContent.byReadHeading}</h3>
         <p className="text-xs text-brand-text-secondary mb-4">{demoContent.byReadHint}</p>
@@ -552,6 +646,147 @@ function SessionSummaryPanel({
         </ol>
       </Card>
     </div>
+  )
+}
+
+interface CareerPanelProps {
+  career: CareerSummary
+  onRetry: (hands: DealtHand[]) => void
+  onResetHistory: () => void
+}
+
+/**
+ * The long-term half of the recap: what this browser has played across every
+ * visit, which read is still winning, and the leaks that remain open.
+ */
+function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
+  const leakHands = useMemo(() => buildRetryDrill(career.openLeaks), [career.openLeaks])
+  const trend =
+    career.latestAccuracy !== null && career.priorAccuracy !== null
+      ? career.latestAccuracy - career.priorAccuracy
+      : null
+
+  return (
+    <Card variant="elevated">
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h3 className="text-xl font-bold text-brand-text-primary">{demoContent.careerHeading}</h3>
+        <Button variant="ghost" size="sm" onClick={onResetHistory}>
+          {demoContent.careerResetCta}
+        </Button>
+      </div>
+      <p className="text-xs text-brand-text-secondary mb-6">{demoContent.careerHint}</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <CareerStat
+          label={demoContent.careerSpotsLabel}
+          value={`${career.answered}`}
+          note={`${career.sessions} ${pluralSessions(career.sessions)}`}
+        />
+        <CareerStat label={demoContent.careerAccuracyLabel} value={`${career.accuracy}%`} />
+        <CareerStat label={demoContent.careerEvLabel} value={formatBb(-career.evLost)} />
+      </div>
+
+      <div className="space-y-2 mb-6">
+        <div className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
+          <span className="text-sm text-brand-text-secondary">{demoContent.careerTrendLabel}</span>
+          {trend === null ? (
+            <span className="text-xs text-brand-text-secondary text-right">
+              {demoContent.careerFirstSessionNote}
+            </span>
+          ) : (
+            <span
+              className={`text-sm font-semibold tabular-nums shrink-0 ${
+                trend > 0 ? 'text-green-400' : trend < 0 ? 'text-red-400' : 'text-brand-text-secondary'
+              }`}
+            >
+              {trend > 0 ? '+' : ''}
+              {trend} pts
+            </span>
+          )}
+        </div>
+
+        {career.toughestRead && (
+          <div className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
+            <span className="text-sm text-brand-text-secondary">
+              {demoContent.careerToughestReadLabel}
+            </span>
+            <span className="text-sm font-semibold text-brand-text-primary shrink-0">
+              {career.toughestRead.opponent.shortLabel}{' '}
+              <span className="text-brand-text-secondary tabular-nums font-normal">
+                {formatBb(-career.toughestRead.evLost)}
+              </span>
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
+          <span className="text-sm text-brand-text-secondary">{demoContent.careerClosedLabel}</span>
+          <span className="text-sm font-semibold text-green-400 tabular-nums shrink-0">
+            {career.closedLeaks}
+          </span>
+        </div>
+        <p className="text-xs text-brand-text-secondary">{demoContent.careerClosedNote}</p>
+      </div>
+
+      {career.openLeaks.length > 0 ? (
+        <>
+          <div className="flex items-baseline justify-between gap-3 mb-1">
+            <h4 className="font-semibold text-brand-text-primary">{demoContent.careerOpenLabel}</h4>
+            <span className="text-sm font-semibold text-red-400 tabular-nums">
+              {career.openLeaks.length}
+            </span>
+          </div>
+          <p className="text-xs text-brand-text-secondary mb-3">{demoContent.careerOpenNote}</p>
+          <ul className="space-y-2 mb-4">
+            {career.openLeaks.map((row) => (
+              <OpenLeakItem key={`${row.spot.id}-${row.grade.opponentId}`} row={row} />
+            ))}
+          </ul>
+          <Button onClick={() => onRetry(leakHands)} className="w-full">
+            {demoContent.leakModeLabel} ({leakHands.length})
+          </Button>
+        </>
+      ) : (
+        <p className="text-sm text-brand-text-secondary">
+          <span className="text-green-400 font-semibold">{demoContent.careerNoLeaksHeading}: </span>
+          {demoContent.careerNoLeaksNote}
+        </p>
+      )}
+    </Card>
+  )
+}
+
+interface CareerStatProps {
+  label: string
+  value: string
+  note?: string
+}
+
+function CareerStat({ label, value, note }: CareerStatProps) {
+  return (
+    <div className="bg-brand-primary rounded-md px-4 py-3">
+      <p className="text-2xl font-bold text-brand-text-primary tabular-nums">{value}</p>
+      <p className="text-xs text-brand-text-secondary">{label}</p>
+      {note && <p className="text-xs text-brand-text-secondary tabular-nums">{note}</p>}
+    </div>
+  )
+}
+
+/** One still-unsolved pairing, named so the visitor knows what they owe. */
+function OpenLeakItem({ row }: { row: ReviewRow }) {
+  return (
+    <li className="flex items-start justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-brand-text-primary">{row.spot.title}</p>
+        <p className="text-xs text-brand-text-secondary">
+          vs {row.opponent.shortLabel} &middot; you played {row.chosenLabel}, best is{' '}
+          <span className="text-brand-accent font-semibold">{row.bestLabel}</span>
+        </p>
+      </div>
+      <span className="text-sm font-semibold text-red-400 tabular-nums shrink-0">
+        {formatBb(-row.grade.evLoss)}
+      </span>
+    </li>
   )
 }
 
@@ -599,7 +834,7 @@ function ReviewListItem({ row, index }: ReviewListItemProps) {
 }
 
 interface ModeOptionProps {
-  icon: 'target' | 'dice'
+  icon: 'target' | 'dice' | 'refresh'
   label: string
   hint: string
   isActive: boolean

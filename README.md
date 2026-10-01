@@ -59,7 +59,7 @@ npm run dev
 
 - `/` - landing page
 - `/about` - vision and positioning
-- `/demo` - interactive spot trainer (client-side, no backend)
+- `/demo` - interactive spot trainer (client-side, no backend; training history is kept in `localStorage` only)
 - `/early-access` - waitlist signup page
 - `/api/waitlist` - waitlist POST plus debug GET endpoint
 
