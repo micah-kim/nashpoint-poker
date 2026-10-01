@@ -218,6 +218,12 @@ export interface DealtHand {
   opponentId: OpponentId
 }
 
+/**
+ * How a session picked its hands. Lives here rather than in the page because
+ * the persisted history in `lib/progress.ts` records it alongside the grades.
+ */
+export type SessionKind = 'explore' | 'drill' | 'retry'
+
 /** How a session went against one opponent profile. */
 export interface OpponentBreakdown {
   opponent: OpponentProfile
@@ -333,4 +339,54 @@ export function buildRetryDrill(rows: ReviewRow[]): DealtHand[] {
   }
 
   return hands
+}
+
+/** Which spot/read pairings a player still owes, and which they have closed. */
+export interface LeakProgress {
+  /**
+   * Pairings whose most recent attempt still gave up EV, costliest first.
+   * Ordered by cost rather than by when they were faced, because across a
+   * career this is a priority list rather than a replay of one session.
+   */
+  open: ReviewRow[]
+  /** Pairings that cost EV once and whose most recent attempt was optimal. */
+  closed: number
+}
+
+/**
+ * Collapses a history down to the state of each spot/read pairing.
+ *
+ * `buildRetryDrill` asks "what did this session miss"; this asks "what is still
+ * missed", which is only answerable once a pairing can be played more than
+ * once. Only the latest attempt at a pairing counts, so replaying a leak
+ * correctly closes it and botching a pairing you once had reopens it.
+ */
+export function summarizeLeakProgress(rows: ReviewRow[]): LeakProgress {
+  const latest = new Map<string, ReviewRow>()
+  const everLeaked = new Set<string>()
+
+  for (const row of rows) {
+    const key = `${row.spot.id}/${row.grade.opponentId}`
+
+    latest.set(key, row)
+
+    if (row.grade.evLoss > 0) {
+      everLeaked.add(key)
+    }
+  }
+
+  const open: ReviewRow[] = []
+  let closed = 0
+
+  for (const [key, row] of latest) {
+    if (row.grade.evLoss > 0) {
+      open.push(row)
+    } else if (everLeaked.has(key)) {
+      closed += 1
+    }
+  }
+
+  // Map iteration is insertion-ordered and sort is stable, so pairings that
+  // cost the same stay in the order they were first faced.
+  return { open: open.sort((a, b) => b.grade.evLoss - a.grade.evLoss), closed }
 }
