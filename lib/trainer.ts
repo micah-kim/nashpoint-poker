@@ -265,20 +265,6 @@ function shuffle<T>(items: T[], random: () => number): T[] {
 }
 
 /**
- * Deals a drill: `DRILL_LENGTH` distinct spot/opponent pairings drawn from the
- * full grid, in random order. Pairings are distinct rather than spots, so the
- * same spot can come back against a different read -- which is the point, since
- * that is where the answer moves.
- */
-export function buildDrill(seed: number): DealtHand[] {
-  const pairings = spots.flatMap((spot) =>
-    opponentProfiles.map((profile) => ({ spot, opponentId: profile.id })),
-  )
-
-  return shuffle(pairings, mulberry32(seed)).slice(0, DRILL_LENGTH)
-}
-
-/**
  * Groups a session by the opponent faced, worst read first.
  *
  * Complements `findBiggestLeak`: that names the single costliest spot, this
@@ -389,4 +375,117 @@ export function summarizeLeakProgress(rows: ReviewRow[]): LeakProgress {
   // Map iteration is insertion-ordered and sort is stable, so pairings that
   // cost the same stay in the order they were first faced.
   return { open: open.sort((a, b) => b.grade.evLoss - a.grade.evLoss), closed }
+}
+
+/** Where a visitor stands on one spot/read pairing. */
+export type CoverageStatus = 'untested' | 'open' | 'mastered'
+
+/** One cell of the spot-by-read grid, whether or not it has been played. */
+export interface CoverageCell {
+  spot: Spot
+  opponent: OpponentProfile
+  status: CoverageStatus
+  /** How many times this pairing has been graded. */
+  attempts: number
+  /** EV given up on the most recent attempt, in big blinds. 0 when untested. */
+  evLost: number
+  /** True when the read moves the answer off the GTO baseline. */
+  isDeviation: boolean
+}
+
+export interface CoverageSummary {
+  /** Pairings the authored spots offer in total. */
+  total: number
+  played: number
+  mastered: number
+  open: number
+  untested: number
+  /** Percentage of the whole grid whose latest attempt was optimal, 0-100. */
+  percentMastered: number
+}
+
+/**
+ * Projects a history onto the full spot-by-read grid.
+ *
+ * `summarizeLeakProgress` only knows about pairings that have been played, so
+ * it can never say what a visitor has not seen yet. This walks every pairing
+ * the authored spots offer, in authored order, so the gaps are first-class:
+ * an untested pairing is a different thing to one that was played and nailed.
+ */
+export function buildCoverage(rows: ReviewRow[]): CoverageCell[] {
+  const attempts = new Map<string, { count: number; latest: ReviewRow }>()
+
+  for (const row of rows) {
+    const key = `${row.spot.id}/${row.grade.opponentId}`
+    const existing = attempts.get(key)
+
+    attempts.set(key, { count: (existing?.count ?? 0) + 1, latest: row })
+  }
+
+  return spots.flatMap((spot) =>
+    opponentProfiles.map((opponent) => {
+      const played = attempts.get(`${spot.id}/${opponent.id}`)
+      const evLost = played ? played.latest.grade.evLoss : 0
+
+      let status: CoverageStatus = 'untested'
+      if (played) {
+        status = evLost > 0 ? 'open' : 'mastered'
+      }
+
+      return {
+        spot,
+        opponent,
+        status,
+        attempts: played?.count ?? 0,
+        evLost,
+        isDeviation: getRecommendation(spot, opponent.id).isDeviation,
+      }
+    }),
+  )
+}
+
+export function summarizeCoverage(coverage: CoverageCell[]): CoverageSummary {
+  const count = (status: CoverageStatus) =>
+    coverage.filter((cell) => cell.status === status).length
+
+  const mastered = count('mastered')
+
+  return {
+    total: coverage.length,
+    played: coverage.filter((cell) => cell.status !== 'untested').length,
+    mastered,
+    open: count('open'),
+    untested: count('untested'),
+    percentMastered: coverage.length === 0 ? 0 : Math.round((mastered / coverage.length) * 100),
+  }
+}
+
+/** Deal order for a coverage drill: unseen first, then unsolved, then proven. */
+const coveragePriority: Record<CoverageStatus, number> = {
+  untested: 0,
+  open: 1,
+  mastered: 2,
+}
+
+/**
+ * Deals a drill of `DRILL_LENGTH` pairings from the gaps in a visitor's
+ * coverage.
+ *
+ * Dealing uniformly from the grid means a returning visitor keeps being handed
+ * pairings they have already proven while pairings they have never seen stay
+ * unseen. This sorts the grid by what the history does not yet know --
+ * untested, then still open, then mastered -- and deals the front of that list.
+ * The shuffle happens first and the sort is stable, so the order inside a tier
+ * is random but still reproducible from the seed.
+ *
+ * Cells are unique by construction, so a drill never repeats a pairing, but the
+ * same spot can come back against a different read -- which is the point, since
+ * that is where the answer moves. With no history every cell is untested, so
+ * this degrades to a plain shuffle of the whole grid.
+ */
+export function buildCoverageDrill(coverage: CoverageCell[], seed: number): DealtHand[] {
+  return shuffle(coverage, mulberry32(seed))
+    .sort((a, b) => coveragePriority[a.status] - coveragePriority[b.status])
+    .slice(0, DRILL_LENGTH)
+    .map((cell) => ({ spot: cell.spot, opponentId: cell.opponent.id }))
 }

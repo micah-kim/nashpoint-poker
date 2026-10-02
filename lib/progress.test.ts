@@ -217,6 +217,51 @@ describe('summarizeCareer', () => {
     expect(career.latestAccuracy).toBe(0)
     expect(career.priorAccuracy).toBeNull()
   })
+
+  it('reports an untouched career as an untested grid', () => {
+    const career = summarizeCareer(emptyHistory)
+
+    expect(career.coverage.length).toBeGreaterThan(0)
+    expect(career.coverageStats).toMatchObject({
+      total: career.coverage.length,
+      played: 0,
+      untested: career.coverage.length,
+      percentMastered: 0,
+    })
+  })
+
+  it('projects every session onto the coverage grid', () => {
+    const career = summarizeCareer(
+      historyOf(
+        session([gradeAnswer(riverSpot, 'tag', 'call')]),
+        session([bestAnswer(cbetSpot, 'fish')], 'drill'),
+      ),
+    )
+    const status = (spotId: string, opponentId: string) =>
+      career.coverage.find((cell) => cell.spot.id === spotId && cell.opponent.id === opponentId)
+        ?.status
+
+    expect(career.coverageStats).toMatchObject({ played: 2, mastered: 1, open: 1 })
+    expect(status('bb-river-bluffcatch', 'tag')).toBe('open')
+    expect(status('btn-cbet-tptk', 'fish')).toBe('mastered')
+    expect(status('btn-cbet-tptk', 'gto')).toBe('untested')
+  })
+
+  it('masters a grid cell once the leak behind it is replayed correctly', () => {
+    const missed = historyOf(session([gradeAnswer(riverSpot, 'tag', 'call')]))
+    const fixed = appendSession(missed, session([bestAnswer(riverSpot, 'tag')], 'retry'))
+
+    expect(summarizeCareer(missed).coverageStats).toMatchObject({ played: 1, open: 1, mastered: 0 })
+    expect(summarizeCareer(fixed).coverageStats).toMatchObject({ played: 1, open: 0, mastered: 1 })
+  })
+
+  it('keeps the coverage grid and the open leaks telling the same story', () => {
+    const career = summarizeCareer(
+      historyOf(session([gradeAnswer(riverSpot, 'tag', 'call'), gradeAnswer(cbetSpot, 'reg', 'bet66')])),
+    )
+
+    expect(career.coverageStats.open).toBe(career.openLeaks.length)
+  })
 })
 
 describe('browser storage', () => {

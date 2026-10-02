@@ -51,10 +51,10 @@ Side‑by‑side:
 
 ## Demo Page (Interactive Spot Trainer)
 - Mode selector: "Pick the read" vs "Deal me a drill", plus "Drill my open leaks (n)" once this browser has unsolved pairings (switching starts a fresh session)  
-- Welcome-back line under the mode selector on a return visit: spots played, sessions, lifetime accuracy, open leaks  
+- Welcome-back line under the mode selector on a return visit: spots played, sessions, lifetime accuracy, open leaks, pairings proven  
 - Spot panel: street/position/pot tags, hole cards, board  
 - Pick-the-read mode: opponent profile selector (five reads, locked once an answer is submitted)  
-- Drill mode: the dealt read, shown read-only -- five randomly paired spot/read hands  
+- Drill mode: the dealt read, shown read-only -- five spot/read hands dealt from the gaps in this browser's coverage  
 - Action buttons + “Lock in my answer”  
 - Verdict banner with EV given up versus the best line  
 - GTO baseline frequency chart  
@@ -70,5 +70,6 @@ Side‑by‑side:
   - Lifetime spots played + sessions, lifetime optimal %, lifetime EV lost
   - Trend: this session's accuracy versus everything before it, in points
   - The read that has cost the most across every session
+  - Coverage grid: one row per spot, one column per read, each cell untested / still open / proven, with a proven-percentage bar, a legend with counts, and a star on the pairings where the read overrides the baseline
   - Leaks closed, and the list of pairings still open with the line you played vs the best line
   - "Drill my open leaks (n)" CTA, and a "Reset history" control that forgets everything  
