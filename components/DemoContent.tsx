@@ -15,7 +15,7 @@ import {
   type TrainingHistory,
 } from '@/lib/progress'
 import {
-  buildDrill,
+  buildCoverageDrill,
   buildRetryDrill,
   findBiggestLeak,
   getRecommendation,
@@ -23,6 +23,9 @@ import {
   reviewSession,
   summarizeByOpponent,
   summarizeSession,
+  type CoverageCell,
+  type CoverageStatus,
+  type CoverageSummary,
   type DealtHand,
   type Grade,
   type OpponentBreakdown,
@@ -37,7 +40,7 @@ const verdictStyles: Record<Verdict, { container: string; text: string; icon: 'c
   mistake: { container: 'bg-red-900/30 border-red-600/50', text: 'text-red-400', icon: 'scale' },
 }
 
-/** A dealt run of hands: a random drill, or a replay of the ones you missed. */
+/** A dealt run of hands: a coverage drill, or a replay of the ones you missed. */
 interface DealtSession {
   kind: Exclude<SessionKind, 'explore'>
   hands: DealtHand[]
@@ -138,11 +141,13 @@ export default function DemoContent() {
   }
 
   /**
-   * Seeded from the clock inside the handler, never during render -- a random
-   * deal computed on the server would not match the client on hydration.
+   * Deals from the gaps in this browser's coverage: never-seen pairings first,
+   * then the ones still open. Seeded from the clock inside the handler, never
+   * during render -- a random deal computed on the server would not match the
+   * client on hydration.
    */
   function startDrill() {
-    setDealt({ kind: 'drill', hands: buildDrill(Date.now()) })
+    setDealt({ kind: 'drill', hands: buildCoverageDrill(careerSummary.coverage, Date.now()) })
     resetSession()
   }
 
@@ -249,7 +254,11 @@ export default function DemoContent() {
                 {pluralSessions(careerSummary.sessions)} &middot;{' '}
                 <span className="tabular-nums">{careerSummary.accuracy}%</span> optimal &middot;{' '}
                 <span className="tabular-nums">{careerSummary.openLeaks.length}</span> open{' '}
-                {careerSummary.openLeaks.length === 1 ? 'leak' : 'leaks'}
+                {careerSummary.openLeaks.length === 1 ? 'leak' : 'leaks'} &middot;{' '}
+                <span className="tabular-nums">
+                  {careerSummary.coverageStats.mastered}/{careerSummary.coverageStats.total}
+                </span>{' '}
+                of the grid proven
               </p>
             )}
           </Card>
@@ -728,6 +737,8 @@ function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
         <p className="text-xs text-brand-text-secondary">{demoContent.careerClosedNote}</p>
       </div>
 
+      <CoverageGrid coverage={career.coverage} stats={career.coverageStats} />
+
       {career.openLeaks.length > 0 ? (
         <>
           <div className="flex items-baseline justify-between gap-3 mb-1">
@@ -753,6 +764,171 @@ function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
         </p>
       )}
     </Card>
+  )
+}
+
+interface CoverageGridProps {
+  coverage: CoverageCell[]
+  stats: CoverageSummary
+}
+
+const coverageStyles: Record<CoverageStatus, { swatch: string; label: string }> = {
+  mastered: {
+    swatch: 'bg-green-600/40 border-green-500/70 text-green-200',
+    label: demoContent.coverageProvenLabel,
+  },
+  open: {
+    swatch: 'bg-red-600/40 border-red-500/70 text-red-200',
+    label: demoContent.coverageOpenLabel,
+  },
+  untested: {
+    swatch: 'bg-brand-surface border-brand-text-secondary/30 text-brand-text-secondary',
+    label: demoContent.coverageUntestedLabel,
+  },
+}
+
+/** Legend order: what you have proven, what you owe, what you have not seen. */
+const coverageLegend: CoverageStatus[] = ['mastered', 'open', 'untested']
+
+/** `buildCoverage` returns the grid spot-major, so this keeps the authored order. */
+function groupCoverageBySpot(coverage: CoverageCell[]): CoverageCell[][] {
+  const bySpot = new Map<string, CoverageCell[]>()
+
+  for (const cell of coverage) {
+    const cells = bySpot.get(cell.spot.id)
+
+    if (cells) {
+      cells.push(cell)
+    } else {
+      bySpot.set(cell.spot.id, [cell])
+    }
+  }
+
+  return [...bySpot.values()]
+}
+
+/**
+ * The whole spot-by-read grid, one cell per pairing.
+ *
+ * The open-leak list says what a visitor got wrong; this says what they have
+ * not answered at all, which is the thing a session recap could never show. It
+ * is also the order drill mode now deals in, so the gaps double as a plan.
+ */
+function CoverageGrid({ coverage, stats }: CoverageGridProps) {
+  const rows = useMemo(() => groupCoverageBySpot(coverage), [coverage])
+  const counts: Record<CoverageStatus, number> = {
+    mastered: stats.mastered,
+    open: stats.open,
+    untested: stats.untested,
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-baseline justify-between gap-3 mb-1">
+        <h4 className="font-semibold text-brand-text-primary">{demoContent.coverageHeading}</h4>
+        <span className="text-sm font-semibold text-brand-accent tabular-nums shrink-0">
+          {stats.mastered}/{stats.total}
+        </span>
+      </div>
+      <p className="text-xs text-brand-text-secondary mb-3">{demoContent.coverageHint}</p>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 bg-brand-surface rounded-full h-2">
+          <div
+            className="h-2 rounded-full bg-brand-accent"
+            style={{ width: `${stats.percentMastered}%` }}
+          />
+        </div>
+        <span className="text-xs text-brand-text-secondary tabular-nums shrink-0">
+          {stats.percentMastered}% {demoContent.coverageProgressLabel}
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-separate border-spacing-0.5 sm:border-spacing-1 text-[10px] sm:text-xs">
+          <caption className="sr-only">{demoContent.coverageHint}</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="text-left font-normal text-brand-text-secondary">
+                {demoContent.coverageSpotColumnLabel}
+              </th>
+              {opponentProfiles.map((profile) => (
+                <th
+                  key={profile.id}
+                  scope="col"
+                  className="px-1 font-normal text-brand-text-secondary whitespace-nowrap"
+                >
+                  {profile.shortLabel}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((cells) => (
+              <tr key={cells[0].spot.id}>
+                <th scope="row" className="text-left font-normal">
+                  <span
+                    className="block max-w-[5rem] sm:max-w-[14rem] truncate text-brand-text-primary"
+                    title={cells[0].spot.title}
+                  >
+                    {cells[0].spot.title}
+                  </span>
+                  <span className="block text-brand-text-secondary">{cells[0].spot.street}</span>
+                </th>
+                {cells.map((cell) => (
+                  <td key={cell.opponent.id} className="p-0">
+                    <CoverageCellBox cell={cell} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-brand-text-secondary">
+        {coverageLegend.map((status) => (
+          <span key={status} className="flex items-center gap-2">
+            <span
+              className={`h-3 w-3 rounded border ${coverageStyles[status].swatch}`}
+              aria-hidden="true"
+            />
+            {coverageStyles[status].label}
+            <span className="tabular-nums font-semibold">{counts[status]}</span>
+          </span>
+        ))}
+      </div>
+      <p className="text-xs text-brand-text-secondary mt-2">
+        {stats.untested === 0 && stats.open === 0
+          ? demoContent.coverageCompleteNote
+          : demoContent.coverageRemainingNote}
+      </p>
+      <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageDeviationNote}</p>
+    </div>
+  )
+}
+
+/** One pairing. Starred when the read moves the answer off the baseline. */
+function CoverageCellBox({ cell }: { cell: CoverageCell }) {
+  const styles = coverageStyles[cell.status]
+  const description = [
+    `${cell.spot.title} vs ${cell.opponent.shortLabel}`,
+    styles.label,
+    cell.status === 'open' ? formatBb(-cell.evLost) : null,
+    cell.isDeviation ? demoContent.coverageDeviationLabel : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' \u00b7 ')
+
+  return (
+    <span
+      role="img"
+      aria-label={description}
+      title={description}
+      className={`flex h-7 min-w-[2rem] sm:min-w-[2.5rem] items-center justify-center rounded border text-[10px] font-bold ${styles.swatch}`}
+    >
+      {cell.isDeviation ? '*' : ''}
+    </span>
   )
 }
 

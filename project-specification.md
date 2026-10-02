@@ -81,7 +81,7 @@ A playable slice of the product, running entirely in the browser.
 
 Training modes:
 - **Pick the read** - walk the authored spots against an opponent you choose
-- **Deal me a drill** - five randomly dealt spot/read pairings you do not get to choose
+- **Deal me a drill** - five spot/read pairings you do not get to choose, dealt from the gaps in your coverage: never-seen pairings first, then the ones still open
 - **Retry drill** - offered from the recap, replays only the hands that gave up EV
 - **Drill my open leaks** - offered once this browser has unsolved pairings, replays the leaks still open across every past visit
 
@@ -94,6 +94,7 @@ Sections:
 - Session summary with hand-by-hand review, a per-read breakdown, and a biggest-leak callout  
 - Retry CTA on the recap that re-deals the missed spot/read pairings  
 - Training history card with lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open  
+- Coverage grid of every spot against every read, marking what is untested, still open, and proven  
 - Waitlist CTA  
 - **Data:** static, hand-authored teaching numbers. No solver, no API calls, no backend  
 - **Storage:** finished sessions are kept in `localStorage` only. No account, and nothing leaves the device

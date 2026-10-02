@@ -14,11 +14,15 @@
 
 import { opponentProfiles, type OpponentId } from './spots'
 import {
+  buildCoverage,
   getSpot,
   reviewSession,
   summarizeByOpponent,
+  summarizeCoverage,
   summarizeLeakProgress,
   summarizeSession,
+  type CoverageCell,
+  type CoverageSummary,
   type Grade,
   type OpponentBreakdown,
   type ReviewRow,
@@ -58,6 +62,10 @@ export interface CareerSummary {
   openLeaks: ReviewRow[]
   /** Pairings missed once and since played perfectly. */
   closedLeaks: number
+  /** Every spot/read pairing the trainer offers, played or not. */
+  coverage: CoverageCell[]
+  /** How much of that grid has been seen and proven. */
+  coverageStats: CoverageSummary
   /** Accuracy of the most recent session, or null when nothing is stored. */
   latestAccuracy: number | null
   /** Accuracy before the most recent session, or null when it was the first. */
@@ -175,6 +183,7 @@ export function summarizeCareer(history: TrainingHistory): CareerSummary {
   const rows = reviewSession(grades)
   const summary = summarizeSession(grades)
   const leaks = summarizeLeakProgress(rows)
+  const coverage = buildCoverage(rows)
   const latest = sessions[sessions.length - 1]
   const prior = sessions.slice(0, -1).flatMap((session) => session.grades)
 
@@ -187,6 +196,8 @@ export function summarizeCareer(history: TrainingHistory): CareerSummary {
     toughestRead: summarizeByOpponent(rows)[0] ?? null,
     openLeaks: leaks.open,
     closedLeaks: leaks.closed,
+    coverage,
+    coverageStats: summarizeCoverage(coverage),
     latestAccuracy: latest ? summarizeSession(latest.grades).accuracy : null,
     priorAccuracy: prior.length > 0 ? summarizeSession(prior).accuracy : null,
   }

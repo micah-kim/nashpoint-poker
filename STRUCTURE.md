@@ -62,7 +62,7 @@ nashpoint-poker/
 │   ├── hooks.ts                  # Shared React hooks
 │   ├── progress.ts               # localStorage training history and career rollup
 │   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
-│   ├── trainer.ts                # Grading, drill dealing, retry drills, leak tracking, session review
+│   ├── trainer.ts                # Grading, coverage, drill dealing, retry drills, leak tracking, session review
 │   └── validation.ts             # Shared waitlist validation
 │
 ├── 📚 Documentation
@@ -118,7 +118,7 @@ nashpoint-poker/
 #### `app/demo/page.tsx`
 - Interactive spot trainer, rendered by `components/DemoContent.tsx`
 - Three hand-authored spots and five opponent profiles (`lib/spots.ts`)
-- Three modes: pick the read yourself, take a dealt drill of five random spot/read pairings (`buildDrill`), or drill the leaks still open from earlier visits
+- Three modes: pick the read yourself, take a dealt drill of five spot/read pairings drawn from the gaps in your coverage (`buildCoverageDrill`), or drill the leaks still open from earlier visits
 - Answers are graded client-side against the EV table (`lib/trainer.ts`)
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
 - Session recap replays every graded spot with its biggest leak (`reviewSession`, `findBiggestLeak`)
@@ -126,6 +126,7 @@ nashpoint-poker/
 - The recap can re-deal just the hands that gave up EV as a retry drill (`buildRetryDrill`)
 - Finished sessions are kept in `localStorage` so a returning visitor still has their leaks (`lib/progress.ts`)
 - The career card shows lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open (`summarizeCareer`, `summarizeLeakProgress`)
+- The coverage grid shows every spot/read pairing as untested, open, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`)
 - No API calls, no solver dependency, and no account -- history never leaves the browser
 
 #### `app/early-access/page.tsx`
