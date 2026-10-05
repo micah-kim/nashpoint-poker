@@ -10,6 +10,7 @@ import {
   saveHistory,
   serializeHistory,
   summarizeCareer,
+  type CareerSummary,
   type PersistedSession,
   type TrainingHistory,
 } from './progress'
@@ -261,6 +262,32 @@ describe('summarizeCareer', () => {
     )
 
     expect(career.coverageStats.open).toBe(career.openLeaks.length)
+  })
+
+  it('splits the lifetime grid by street without disagreeing with the whole', () => {
+    const career = summarizeCareer(
+      historyOf(
+        session([gradeAnswer(riverSpot, 'tag', 'call')]),
+        session([bestAnswer(cbetSpot, 'fish')], 'drill'),
+      ),
+    )
+    const sum = (pick: (entry: CareerSummary['streetProgress'][number]) => number) =>
+      career.streetProgress.reduce((total, entry) => total + pick(entry), 0)
+
+    expect(career.streetProgress.length).toBeGreaterThan(1)
+    expect(sum((entry) => entry.total)).toBe(career.coverage.length)
+    expect(sum((entry) => entry.mastered)).toBe(career.coverageStats.mastered)
+    expect(sum((entry) => entry.open)).toBe(career.coverageStats.open)
+  })
+
+  it('credits each street with only the pairings played on it', () => {
+    const career = summarizeCareer(historyOf(session([bestAnswer(riverSpot, 'fish')])))
+    const onStreet = (street: string) =>
+      career.streetProgress.find((entry) => entry.street === street)!
+
+    expect(onStreet(riverSpot.street).mastered).toBe(1)
+    expect(onStreet('Preflop').mastered).toBe(0)
+    expect(onStreet('Preflop').untested).toBe(onStreet('Preflop').total)
   })
 })
 

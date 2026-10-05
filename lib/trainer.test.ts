@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { opponentProfiles, spots } from './spots'
+import { opponentProfiles, spots, streets } from './spots'
 import {
   buildCoverage,
   buildCoverageDrill,
   buildRetryDrill,
   CLOSE_ENOUGH_BB,
   DRILL_LENGTH,
+  drillFocuses,
   findBiggestLeak,
   getOpponentProfile,
   getRecommendation,
@@ -16,6 +17,7 @@ import {
   summarizeCoverage,
   summarizeLeakProgress,
   summarizeSession,
+  summarizeStreets,
 } from './trainer'
 
 const cbetSpot = getSpot('btn-cbet-tptk')!
@@ -73,6 +75,36 @@ describe('spot data', () => {
   it.each(spots)('$id uses unique action ids', (spot) => {
     const ids = spot.actions.map((action) => action.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('uses a unique id per spot', () => {
+    const ids = spots.map((spot) => spot.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('covers every street a drill can be focused on', () => {
+    for (const street of streets) {
+      expect(
+        spots.some((spot) => spot.street === street),
+        `no authored spot on the ${street}`,
+      ).toBe(true)
+    }
+  })
+
+  it('is authored in street order, so the grid reads like a hand', () => {
+    const played = spots.map((spot) => streets.indexOf(spot.street))
+
+    expect(played).toEqual([...played].sort((a, b) => a - b))
+  })
+
+  it.each(spots)('$id has at least one read that overrides the baseline', (spot) => {
+    const deviations = opponentProfiles.filter(
+      (profile) => getRecommendation(spot, profile.id).isDeviation,
+    )
+
+    // A spot where every read agrees with the baseline teaches nothing about
+    // exploitative play, which is the whole point of the trainer.
+    expect(deviations.length).toBeGreaterThan(0)
   })
 })
 
@@ -324,6 +356,163 @@ describe('buildCoverageDrill', () => {
 
     expect(dealt).toHaveLength(DRILL_LENGTH)
     expect(new Set(dealt.map(pairingKey)).size).toBe(dealt.length)
+  })
+})
+
+describe('buildCoverageDrill with a street focus', () => {
+  const blankGrid = buildCoverage([])
+
+  it('defaults to the whole grid, matching an explicit "all"', () => {
+    expect(buildCoverageDrill(blankGrid, 42).map(pairingKey)).toEqual(
+      buildCoverageDrill(blankGrid, 42, 'all').map(pairingKey),
+    )
+  })
+
+  it.each(streets)('only deals %s spots when focused on %s', (street) => {
+    for (const seed of [1, 88, 2026]) {
+      const dealt = buildCoverageDrill(blankGrid, seed, street)
+
+      expect(dealt.length, `${street} dealt nothing on seed ${seed}`).toBeGreaterThan(0)
+
+      for (const hand of dealt) {
+        expect(hand.spot.street).toBe(street)
+      }
+    }
+  })
+
+  it('deals a short drill rather than padding a street that cannot fill one', () => {
+    for (const street of streets) {
+      const available = blankGrid.filter((cell) => cell.spot.street === street).length
+      const dealt = buildCoverageDrill(blankGrid, 7, street)
+
+      expect(dealt).toHaveLength(Math.min(DRILL_LENGTH, available))
+    }
+  })
+
+  it('still puts the unseen pairings of that street first', () => {
+    const street = streets[0]
+    const onStreet = allPairings.filter((pairing) => pairing.spot.street === street)
+    const [unseen, ...played] = onStreet
+    const coverage = buildCoverage(reviewSession(played.map(gradeOptimally)))
+
+    for (const seed of [4, 61, 909]) {
+      expect(buildCoverageDrill(coverage, seed, street).map(pairingKey)[0]).toBe(
+        pairingKey(unseen),
+      )
+    }
+  })
+
+  it('still puts an open leak on that street ahead of a proven pairing', () => {
+    const street = streets[streets.length - 1]
+    const onStreet = allPairings.filter((pairing) => pairing.spot.street === street)
+    const [leaked, ...rest] = onStreet
+    const elsewhere = allPairings.filter((pairing) => pairing.spot.street !== street)
+    const grades = [
+      gradeBadly(leaked),
+      ...rest.map(gradeOptimally),
+      ...elsewhere.map(gradeOptimally),
+    ]
+    const coverage = buildCoverage(reviewSession(grades))
+
+    expect(summarizeCoverage(coverage).untested).toBe(0)
+    expect(buildCoverageDrill(coverage, 3, street).map(pairingKey)[0]).toBe(pairingKey(leaked))
+  })
+
+  it('is reproducible from its seed', () => {
+    const street = streets[1]
+
+    expect(buildCoverageDrill(blankGrid, 17, street).map(pairingKey)).toEqual(
+      buildCoverageDrill(blankGrid, 17, street).map(pairingKey),
+    )
+  })
+
+  it('deals nothing from an empty grid rather than throwing', () => {
+    expect(buildCoverageDrill([], 1, 'Turn')).toEqual([])
+  })
+})
+
+describe('summarizeStreets', () => {
+  const blankGrid = buildCoverage([])
+
+  it('reports nothing for an empty grid', () => {
+    expect(summarizeStreets([])).toEqual([])
+  })
+
+  it('walks the streets in the order a hand is played', () => {
+    expect(summarizeStreets(blankGrid).map((progress) => progress.street)).toEqual(
+      streets.filter((street) => spots.some((spot) => spot.street === street)),
+    )
+  })
+
+  it('splits the grid without losing or double-counting a pairing', () => {
+    const totals = summarizeStreets(blankGrid).reduce(
+      (sum, progress) => sum + progress.total,
+      0,
+    )
+
+    expect(totals).toBe(blankGrid.length)
+  })
+
+  it('reports an unplayed street as entirely untested', () => {
+    for (const progress of summarizeStreets(blankGrid)) {
+      expect(progress).toMatchObject({
+        untested: progress.total,
+        mastered: 0,
+        open: 0,
+        percentMastered: 0,
+      })
+    }
+  })
+
+  it('counts a mastered pairing against its own street only', () => {
+    const pairing = allPairings[0]
+    const coverage = buildCoverage(reviewSession([gradeOptimally(pairing)]))
+    const progress = summarizeStreets(coverage)
+    const played = progress.find((entry) => entry.street === pairing.spot.street)!
+
+    expect(played.mastered).toBe(1)
+    expect(progress.filter((entry) => entry.mastered > 0)).toEqual([played])
+  })
+
+  it('counts a pairing that gave up EV as open on its street', () => {
+    const pairing = allPairings[0]
+    const coverage = buildCoverage(reviewSession([gradeBadly(pairing)]))
+    const played = summarizeStreets(coverage).find(
+      (entry) => entry.street === pairing.spot.street,
+    )!
+
+    expect(played).toMatchObject({ open: 1, mastered: 0, untested: played.total - 1 })
+  })
+
+  it('reaches 100 percent once every pairing on a street is proven', () => {
+    const street = streets[0]
+    const onStreet = allPairings.filter((pairing) => pairing.spot.street === street)
+    const coverage = buildCoverage(reviewSession(onStreet.map(gradeOptimally)))
+    const played = summarizeStreets(coverage).find((entry) => entry.street === street)!
+
+    expect(played).toMatchObject({ mastered: played.total, untested: 0, percentMastered: 100 })
+  })
+
+  it('agrees with the whole-grid summary once every street is added up', () => {
+    const coverage = buildCoverage(reviewSession([gradeBadly(allPairings[0]), gradeOptimally(allPairings[1])]))
+    const progress = summarizeStreets(coverage)
+    const stats = summarizeCoverage(coverage)
+    const sum = (pick: (entry: (typeof progress)[number]) => number) =>
+      progress.reduce((total, entry) => total + pick(entry), 0)
+
+    expect(sum((entry) => entry.mastered)).toBe(stats.mastered)
+    expect(sum((entry) => entry.open)).toBe(stats.open)
+    expect(sum((entry) => entry.untested)).toBe(stats.untested)
+  })
+
+  it('offers a focus for every street it reports, and nothing it does not', () => {
+    const reported = summarizeStreets(blankGrid).map((progress) => progress.street)
+
+    expect(drillFocuses).toEqual(['all', ...streets])
+
+    for (const street of reported) {
+      expect(drillFocuses).toContain(street)
+    }
   })
 })
 

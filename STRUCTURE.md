@@ -62,7 +62,7 @@ nashpoint-poker/
 │   ├── hooks.ts                  # Shared React hooks
 │   ├── progress.ts               # localStorage training history and career rollup
 │   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
-│   ├── trainer.ts                # Grading, coverage, drill dealing, retry drills, leak tracking, session review
+│   ├── trainer.ts                # Grading, coverage, street progress, drill dealing, retry drills, leak tracking, session review
 │   └── validation.ts             # Shared waitlist validation
 │
 ├── 📚 Documentation
@@ -117,8 +117,9 @@ nashpoint-poker/
 
 #### `app/demo/page.tsx`
 - Interactive spot trainer, rendered by `components/DemoContent.tsx`
-- Three hand-authored spots and five opponent profiles (`lib/spots.ts`)
-- Three modes: pick the read yourself, take a dealt drill of five spot/read pairings drawn from the gaps in your coverage (`buildCoverageDrill`), or drill the leaks still open from earlier visits
+- Seven hand-authored spots across all four streets and five opponent profiles (`lib/spots.ts`)
+- Three modes: pick the read yourself, take a dealt drill of up to five spot/read pairings drawn from the gaps in your coverage (`buildCoverageDrill`), or drill the leaks still open from earlier visits
+- A drill can be aimed at one street, which deals only that street's pairings (`DrillFocus`)
 - Answers are graded client-side against the EV table (`lib/trainer.ts`)
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
 - Session recap replays every graded spot with its biggest leak (`reviewSession`, `findBiggestLeak`)
@@ -127,6 +128,7 @@ nashpoint-poker/
 - Finished sessions are kept in `localStorage` so a returning visitor still has their leaks (`lib/progress.ts`)
 - The career card shows lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open (`summarizeCareer`, `summarizeLeakProgress`)
 - The coverage grid shows every spot/read pairing as untested, open, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`)
+- Per-street progress splits that grid preflop through river, both on the drill chips and in the recap (`summarizeStreets`)
 - No API calls, no solver dependency, and no account -- history never leaves the browser
 
 #### `app/early-access/page.tsx`
