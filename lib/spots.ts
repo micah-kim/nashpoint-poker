@@ -12,6 +12,12 @@
 
 export type OpponentId = 'gto' | 'tag' | 'lag' | 'fish' | 'reg'
 
+/** The streets a spot can sit on. Also the order a drill can be focused in. */
+export type Street = 'Preflop' | 'Flop' | 'Turn' | 'River'
+
+/** Canonical street order -- the order a hand is actually played. */
+export const streets: Street[] = ['Preflop', 'Flop', 'Turn', 'River']
+
 export interface OpponentProfile {
   id: OpponentId
   label: string
@@ -38,7 +44,7 @@ export interface OpponentRead {
 export interface Spot {
   id: string
   title: string
-  street: string
+  street: Street
   position: string
   potType: string
   hand: string[]
@@ -84,6 +90,10 @@ export const opponentProfiles: OpponentProfile[] = [
   },
 ]
 
+/**
+ * Authored in street order, preflop through river, so the grid and the
+ * pick-the-read walkthrough both read the way a hand is played.
+ */
 export const spots: Spot[] = [
   {
     id: 'btn-3bet-aqo',
@@ -134,6 +144,61 @@ export const spots: Spot[] = [
         notes: [
           'A micro reg opens a touch wider than theory from UTG and 4-bets far too rarely.',
           'Keep 3-betting -- the deviation is small, which is exactly what you should expect against a competent player.',
+        ],
+      },
+    },
+  },
+  {
+    id: 'bb-defend-k9s',
+    title: 'K9 suited in the big blind vs a button steal',
+    street: 'Preflop',
+    position: 'BB',
+    potType: 'Open-raised pot',
+    hand: ['Kh', '9h'],
+    board: [],
+    setup:
+      'It folds to the button, who opens to 2.5bb. You are in the big blind with 100bb effective, getting the best price in poker.',
+    question: 'How do you defend?',
+    baselineNote:
+      'Closing the action at better than 3-to-1 means a suited king is never folding to one raise, and K9s flops well enough to continue out of position. Theory calls most of the time and 3-bets a slice to stop the button stealing for free.',
+    actions: [
+      { id: 'fold', label: 'Fold', frequency: 6, ev: 0 },
+      { id: 'call', label: 'Call 1.5bb more', frequency: 72, ev: 0.12 },
+      { id: 'threebet', label: '3-bet to 10bb', frequency: 22, ev: 0.05 },
+    ],
+    reads: {
+      gto: {
+        evAdjustments: { fold: 0, call: 0, threebet: 0 },
+        notes: [
+          'A balanced button steals the right amount and plays back at your 3-bet correctly -- there is nothing to attack.',
+        ],
+      },
+      tag: {
+        evAdjustments: { fold: 0, call: -0.04, threebet: -0.2 },
+        notes: [
+          'A TAG opens the button tighter than theory, so your price is worse than the raw pot odds suggest.',
+          'Keep calling, but drop the balance 3-bets: against an honest range they fold out the hands you dominate and get 4-bet by the rest.',
+        ],
+      },
+      lag: {
+        evAdjustments: { fold: 0, call: 0.2, threebet: 0.5 },
+        notes: [
+          'A LAG opens the button with almost any two cards, which puts K9s comfortably ahead of their range.',
+          '3-bet. Either you take it down preflop or you play a bigger pot with the better hand -- punishing a wide steal is where blind defence makes its money.',
+        ],
+      },
+      fish: {
+        evAdjustments: { fold: 0, call: 0.35, threebet: -0.1 },
+        notes: [
+          'A passive player opens wide and calls your 3-bet with all of it, so the fold equity you are paying for is not there.',
+          'Just call. A small pot out of position lets you fold cheaply when you miss and still get paid in full when you flop a king.',
+        ],
+      },
+      reg: {
+        evAdjustments: { fold: 0, call: 0.05, threebet: 0.15 },
+        notes: [
+          'Micro regs open the button a little wider than theory and fold to blind 3-bets a little too often.',
+          'A marginal 3-bet, not a big one. The edge is real but thin -- which is what you should expect against a competent player.',
         ],
       },
     },
@@ -192,6 +257,116 @@ export const spots: Spot[] = [
     },
   },
   {
+    id: 'bb-flop-raise-draw',
+    title: 'Open-ender facing a small c-bet',
+    street: 'Flop',
+    position: 'BB',
+    potType: 'Single-raised pot',
+    hand: ['8s', '7s'],
+    board: ['9s', '6d', '2h'],
+    setup:
+      'You defended the big blind against a cutoff open. They bet 2bb into a 6.5bb pot on 9-6-2, and you have an open-ender with a backdoor flush draw.',
+    question: 'How do you play the draw?',
+    baselineNote:
+      'Thirteen clean outs is far too much equity to fold against a small range bet, and raising charges the entire air portion of a one-third-pot betting range. Theory raises a healthy chunk of its best draws here and calls with the rest.',
+    actions: [
+      { id: 'fold', label: 'Fold', frequency: 4, ev: 0 },
+      { id: 'call', label: 'Call 2bb', frequency: 54, ev: 1.1 },
+      { id: 'raise', label: 'Raise to 7bb', frequency: 42, ev: 1.35 },
+    ],
+    reads: {
+      gto: {
+        evAdjustments: { fold: 0, call: 0, raise: 0 },
+        notes: [
+          'Against a balanced c-bettor the baseline mix is already max-EV -- raise your best draws, call the rest.',
+        ],
+      },
+      tag: {
+        evAdjustments: { fold: 0, call: -0.1, raise: 0.4 },
+        notes: [
+          'TAG players range-bet this flop small and then over-fold to a raise with the exact hands they were betting for protection.',
+          'Raise, and raise more often than theory. The fold equity comes on top of thirteen outs.',
+        ],
+      },
+      lag: {
+        evAdjustments: { fold: 0, call: 0.3, raise: -0.45 },
+        notes: [
+          'A LAG bets this flop with everything and then refuses to fold to a raise -- plenty of them jam straight over it.',
+          'Call. A draw this good does not need fold equity, and they will pay you off every time you get there.',
+        ],
+      },
+      fish: {
+        evAdjustments: { fold: 0, call: 0.25, raise: -0.55 },
+        notes: [
+          'A passive player does not fire this flop without a piece of it, so a raise is folding out almost nothing.',
+          'Call, hit, and collect. They will never fold the pair they bet when you make your straight.',
+        ],
+      },
+      reg: {
+        evAdjustments: { fold: 0, call: 0.1, raise: 0.1 },
+        notes: [
+          'A micro reg c-bets this texture close to correctly and defends a flop raise about as often as they should.',
+          'Take the baseline line. The money against them comes one street later, on the turn they fold too often.',
+        ],
+      },
+    },
+  },
+  {
+    id: 'btn-turn-barrel-draw',
+    title: 'Flush draw on the turn after a called c-bet',
+    street: 'Turn',
+    position: 'BTN',
+    potType: 'Single-raised pot',
+    hand: ['Jh', 'Th'],
+    board: ['9s', '6h', '2c', 'Ah'],
+    setup:
+      'You raised the button and c-bet a 9-6-2 flop; the big blind called. The ace of hearts on the turn gives you a flush draw to go with two overcards, in a 15bb pot.',
+    question: 'Do you barrel the turn?',
+    baselineNote:
+      'Nine outs to a flush plus two overcards is a textbook semi-bluff: you fold out better hands now and still improve when you get called. Two-thirds pot is the standard barrel, and the checks keep enough equity in a range that has to defend the river.',
+    actions: [
+      { id: 'check', label: 'Check', frequency: 30, ev: 2.2 },
+      { id: 'bet33', label: 'Bet 1/3 pot', frequency: 12, ev: 2.3 },
+      { id: 'bet66', label: 'Bet 2/3 pot', frequency: 58, ev: 2.5 },
+    ],
+    reads: {
+      gto: {
+        evAdjustments: { check: 0, bet33: 0, bet66: 0 },
+        notes: [
+          'A balanced defender folds exactly the right amount of this turn, so the baseline barrel is already max-EV.',
+        ],
+      },
+      tag: {
+        evAdjustments: { check: -0.15, bet33: 0.05, bet66: 0.45 },
+        notes: [
+          'TAG players read a turn barrel as real strength and fold every pair they cannot call twice with.',
+          'Barrel, and pick the bigger size -- their fold frequency is the entire reason this hand prints.',
+        ],
+      },
+      lag: {
+        evAdjustments: { check: 0.6, bet33: -0.2, bet66: -0.35 },
+        notes: [
+          'A LAG floats your flop c-bet with everything and then raises turns specifically to blow you off this hand.',
+          'Check. You realise nine outs for free and keep the pot small with a holding that cannot stand a raise.',
+        ],
+      },
+      fish: {
+        evAdjustments: { check: 0.75, bet33: -0.3, bet66: -0.8 },
+        notes: [
+          'A passive fish calls a turn barrel with any pair and any draw, so there is no fold equity to buy.',
+          'Check and take the free card. Bluffing a station is the most expensive habit in low-stakes poker -- you beat them by value betting instead.',
+        ],
+      },
+      reg: {
+        evAdjustments: { check: -0.05, bet33: 0.1, bet66: 0.2 },
+        notes: [
+          'Micro regs call flops too wide and then fold the turn more often than they should.',
+          'Keep barrelling. The turn is the street where their loose flop call gives up.',
+        ],
+      },
+    },
+  },
+  {
     id: 'bb-river-bluffcatch',
     title: 'Second pair facing a river bet',
     street: 'River',
@@ -239,6 +414,61 @@ export const spots: Spot[] = [
         notes: [
           'Micro regs know they should bluff rivers but still do it too rarely.',
           'A small fold-leaning deviation, not a big one -- they are not nearly as unbalanced as the recreational players.',
+        ],
+      },
+    },
+  },
+  {
+    id: 'btn-river-bluff-ace-high',
+    title: 'Busted flush draw on the river',
+    street: 'River',
+    position: 'BTN',
+    potType: 'Single-raised pot',
+    hand: ['Ad', '5d'],
+    board: ['Kc', '9d', '4h', '7d', '2s'],
+    setup:
+      'You raised the button and barrelled the flop and turn. The deuce of spades bricks your flush draw, leaving you ace-high in a 34bb pot.',
+    question: 'Do you fire the third barrel?',
+    baselineNote:
+      'A busted draw holding the ace of diamonds is the ideal river bluff: you block their nut flush and ace-high essentially never wins a showdown against a range that called twice. Theory bluffs big here, because checking concedes a pot you can still take away.',
+    actions: [
+      { id: 'check', label: 'Check', frequency: 35, ev: 0 },
+      { id: 'bet50', label: 'Bet 1/2 pot', frequency: 15, ev: 1.4 },
+      { id: 'bet100', label: 'Bet pot', frequency: 50, ev: 1.9 },
+    ],
+    reads: {
+      gto: {
+        evAdjustments: { check: 0, bet50: 0, bet100: 0 },
+        notes: [
+          'A balanced river caller defends exactly enough to keep your bluff honest -- the baseline size is still the best of the three.',
+        ],
+      },
+      tag: {
+        evAdjustments: { check: 0, bet50: 0.3, bet100: 0.9 },
+        notes: [
+          'TAG players fold rivers far too often, and the hands they are folding are the one-pair holdings that called the turn for showdown value.',
+          'Fire the big one. A hand with no showdown value against a range that will not call is the cheapest money in poker.',
+        ],
+      },
+      lag: {
+        evAdjustments: { check: 0, bet50: -1.6, bet100: -2.2 },
+        notes: [
+          'A LAG calls rivers wide, because they assume you are doing exactly this.',
+          'Give up. Ace-high will not win a showdown, but losing nothing still beats losing another 34bb.',
+        ],
+      },
+      fish: {
+        evAdjustments: { check: 0, bet50: -1.6, bet100: -2.3 },
+        notes: [
+          'A passive fish calls the river with any pair, and most of their range already beats ace-high.',
+          'Check it back. Against a player who never folds, a bluff is a donation -- save it for a spot where you have the goods.',
+        ],
+      },
+      reg: {
+        evAdjustments: { check: 0, bet50: -0.5, bet100: -1.1 },
+        notes: [
+          'Micro regs over-call rivers with the pairs they floated the turn with, so the big bluff gets through much less than theory assumes.',
+          'If you are bluffing, bluff small. Half pot still folds out their worst hands and costs you far less when it does not work.',
         ],
       },
     },

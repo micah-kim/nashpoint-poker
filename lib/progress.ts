@@ -21,12 +21,14 @@ import {
   summarizeCoverage,
   summarizeLeakProgress,
   summarizeSession,
+  summarizeStreets,
   type CoverageCell,
   type CoverageSummary,
   type Grade,
   type OpponentBreakdown,
   type ReviewRow,
   type SessionKind,
+  type StreetProgress,
   type Verdict,
 } from './trainer'
 
@@ -66,6 +68,8 @@ export interface CareerSummary {
   coverage: CoverageCell[]
   /** How much of that grid has been seen and proven. */
   coverageStats: CoverageSummary
+  /** The same grid split by street, preflop through river. */
+  streetProgress: StreetProgress[]
   /** Accuracy of the most recent session, or null when nothing is stored. */
   latestAccuracy: number | null
   /** Accuracy before the most recent session, or null when it was the first. */
@@ -198,6 +202,7 @@ export function summarizeCareer(history: TrainingHistory): CareerSummary {
     closedLeaks: leaks.closed,
     coverage,
     coverageStats: summarizeCoverage(coverage),
+    streetProgress: summarizeStreets(coverage),
     latestAccuracy: latest ? summarizeSession(latest.grades).accuracy : null,
     priorAccuracy: prior.length > 0 ? summarizeSession(prior).accuracy : null,
   }

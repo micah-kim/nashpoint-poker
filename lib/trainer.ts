@@ -10,10 +10,12 @@
 import {
   opponentProfiles,
   spots,
+  streets,
   type OpponentId,
   type OpponentProfile,
   type Spot,
   type SpotAction,
+  type Street,
 } from './spots'
 
 /** EV loss (in big blinds) a user can give up and still be graded 'close'. */
@@ -460,6 +462,55 @@ export function summarizeCoverage(coverage: CoverageCell[]): CoverageSummary {
   }
 }
 
+/**
+ * Which street a drill is aimed at, or 'all' for the whole grid.
+ *
+ * Lives here rather than in the page because it is the only thing that changes
+ * which pairings a drill can deal.
+ */
+export type DrillFocus = Street | 'all'
+
+/** Every focus a visitor can pick, whole grid first then street by street. */
+export const drillFocuses: DrillFocus[] = ['all', ...streets]
+
+/** How much of one street's pairings a visitor has seen and proven. */
+export interface StreetProgress {
+  street: Street
+  /** Pairings this street offers: its spots times the opponent profiles. */
+  total: number
+  mastered: number
+  open: number
+  untested: number
+  /** Percentage of this street's pairings whose latest attempt was optimal, 0-100. */
+  percentMastered: number
+}
+
+/**
+ * Splits a coverage grid by street, in the order a hand is played.
+ *
+ * `summarizeCoverage` collapses the whole grid to one number, which hides the
+ * thing a player actually wants to know: that their river play is solid and
+ * their turn play has never been tested. Streets with no authored spots are
+ * dropped, so this only ever names a street a drill can be focused on.
+ */
+export function summarizeStreets(coverage: CoverageCell[]): StreetProgress[] {
+  return streets
+    .map((street) => {
+      const cells = coverage.filter((cell) => cell.spot.street === street)
+      const stats = summarizeCoverage(cells)
+
+      return {
+        street,
+        total: stats.total,
+        mastered: stats.mastered,
+        open: stats.open,
+        untested: stats.untested,
+        percentMastered: stats.percentMastered,
+      }
+    })
+    .filter((progress) => progress.total > 0)
+}
+
 /** Deal order for a coverage drill: unseen first, then unsolved, then proven. */
 const coveragePriority: Record<CoverageStatus, number> = {
   untested: 0,
@@ -482,9 +533,20 @@ const coveragePriority: Record<CoverageStatus, number> = {
  * same spot can come back against a different read -- which is the point, since
  * that is where the answer moves. With no history every cell is untested, so
  * this degrades to a plain shuffle of the whole grid.
+ *
+ * A `focus` narrows the deal to one street first. A street with fewer than
+ * `DRILL_LENGTH` pairings simply deals a shorter drill rather than padding
+ * itself out with pairings from elsewhere -- a turn drill that quietly hands
+ * you a preflop spot is not a turn drill.
  */
-export function buildCoverageDrill(coverage: CoverageCell[], seed: number): DealtHand[] {
-  return shuffle(coverage, mulberry32(seed))
+export function buildCoverageDrill(
+  coverage: CoverageCell[],
+  seed: number,
+  focus: DrillFocus = 'all',
+): DealtHand[] {
+  const pool = focus === 'all' ? coverage : coverage.filter((cell) => cell.spot.street === focus)
+
+  return shuffle(pool, mulberry32(seed))
     .sort((a, b) => coveragePriority[a.status] - coveragePriority[b.status])
     .slice(0, DRILL_LENGTH)
     .map((cell) => ({ spot: cell.spot, opponentId: cell.opponent.id }))

@@ -17,6 +17,7 @@ import {
 import {
   buildCoverageDrill,
   buildRetryDrill,
+  drillFocuses,
   findBiggestLeak,
   getRecommendation,
   gradeAnswer,
@@ -27,10 +28,12 @@ import {
   type CoverageStatus,
   type CoverageSummary,
   type DealtHand,
+  type DrillFocus,
   type Grade,
   type OpponentBreakdown,
   type ReviewRow,
   type SessionKind,
+  type StreetProgress,
   type Verdict,
 } from '@/lib/trainer'
 
@@ -61,6 +64,8 @@ export default function DemoContent() {
   /** A dealt session, or null while the user is picking the read themselves. */
   const [dealt, setDealt] = useState<DealtSession | null>(null)
   const [spotIndex, setSpotIndex] = useState(0)
+  /** Street the next drill is aimed at. Sticky, so re-dealing stays on street. */
+  const [focus, setFocus] = useState<DrillFocus>('all')
   const [pickedOpponentId, setPickedOpponentId] = useState<OpponentId>('tag')
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
   const [grade, setGrade] = useState<Grade | null>(null)
@@ -83,6 +88,8 @@ export default function DemoContent() {
 
   const kind: SessionKind = dealt?.kind ?? 'explore'
   const isDealt = dealt !== null
+  /** Only a live drill is on a street; explore and retry ignore the focus. */
+  const activeFocus: DrillFocus | null = kind === 'drill' ? focus : null
   const hand = dealt ? dealt.hands[spotIndex] : { spot: spots[spotIndex], opponentId: pickedOpponentId }
   const { spot, opponentId } = hand
   const totalSpots = dealt ? dealt.hands.length : spots.length
@@ -142,12 +149,21 @@ export default function DemoContent() {
 
   /**
    * Deals from the gaps in this browser's coverage: never-seen pairings first,
-   * then the ones still open. Seeded from the clock inside the handler, never
-   * during render -- a random deal computed on the server would not match the
-   * client on hydration.
+   * then the ones still open, narrowed to the focused street. Seeded from the
+   * clock inside the handler, never during render -- a random deal computed on
+   * the server would not match the client on hydration.
+   *
+   * A focus with nothing to deal leaves the session alone rather than dealing
+   * an empty drill. The street chips only offer streets that have spots, so
+   * this is a guard rather than a reachable state.
    */
-  function startDrill() {
-    setDealt({ kind: 'drill', hands: buildCoverageDrill(careerSummary.coverage, Date.now()) })
+  function startDrill(nextFocus: DrillFocus) {
+    const hands = buildCoverageDrill(careerSummary.coverage, Date.now(), nextFocus)
+
+    if (hands.length === 0) return
+
+    setFocus(nextFocus)
+    setDealt({ kind: 'drill', hands })
     resetSession()
   }
 
@@ -184,7 +200,7 @@ export default function DemoContent() {
    */
   function handleRestart() {
     if (kind === 'drill') {
-      startDrill()
+      startDrill(focus)
       return
     }
 
@@ -228,7 +244,7 @@ export default function DemoContent() {
                 hint={demoContent.drillModeHint}
                 isActive={kind === 'drill'}
                 // Always deals, so this re-deals mid-drill rather than going inert.
-                onSelect={startDrill}
+                onSelect={() => startDrill(focus)}
               />
               {/* Only offered once this browser has leaks to hand back. */}
               {leakHands.length > 0 && (
@@ -241,9 +257,20 @@ export default function DemoContent() {
                 />
               )}
             </div>
+            <StreetFocusPicker
+              activeFocus={activeFocus}
+              streetProgress={careerSummary.streetProgress}
+              coverageStats={careerSummary.coverageStats}
+              onSelect={startDrill}
+            />
             <p className="text-xs text-brand-text-secondary mt-3">
               {kind === 'retry' ? demoContent.retryActiveNote : demoContent.modeSwitchNote}
             </p>
+            {activeFocus && activeFocus !== 'all' && (
+              <p className="text-xs text-brand-accent mt-1">
+                {activeFocus} {demoContent.focusActiveNote}
+              </p>
+            )}
             {careerSummary.sessions > 0 && (
               <p className="text-xs text-brand-text-secondary mt-2">
                 <span className="text-brand-accent font-semibold">
@@ -271,7 +298,7 @@ export default function DemoContent() {
             career={careerSummary}
             onRestart={handleRestart}
             onRetry={startRetry}
-            onSwitchMode={kind === 'explore' ? startDrill : startExplore}
+            onSwitchMode={kind === 'explore' ? () => startDrill(focus) : startExplore}
             onResetHistory={resetHistory}
           />
         ) : (
@@ -739,6 +766,8 @@ function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
 
       <CoverageGrid coverage={career.coverage} stats={career.coverageStats} />
 
+      <StreetProgressPanel streetProgress={career.streetProgress} />
+
       {career.openLeaks.length > 0 ? (
         <>
           <div className="flex items-baseline justify-between gap-3 mb-1">
@@ -1041,6 +1070,119 @@ function ModeOption({ icon, label, hint, isActive, onSelect }: ModeOptionProps) 
       </span>
       <span className="block text-xs text-brand-text-secondary">{hint}</span>
     </button>
+  )
+}
+
+interface StreetFocusPickerProps {
+  /** The street the live drill is on, or null when no drill is running. */
+  activeFocus: DrillFocus | null
+  streetProgress: StreetProgress[]
+  coverageStats: CoverageSummary
+  onSelect: (focus: DrillFocus) => void
+}
+
+/**
+ * Aims a drill at one street, dealing immediately on click.
+ *
+ * The counter on each chip is that street's proven pairings, so the picker is
+ * also the only place the per-street gaps show up before a visitor has
+ * finished a session and opened the recap. Streets with no authored spots
+ * never reach `summarizeStreets`, so they are never offered.
+ */
+function StreetFocusPicker({
+  activeFocus,
+  streetProgress,
+  coverageStats,
+  onSelect,
+}: StreetFocusPickerProps) {
+  const counts = useMemo(() => {
+    const byFocus = new Map<DrillFocus, { mastered: number; total: number }>([
+      ['all', { mastered: coverageStats.mastered, total: coverageStats.total }],
+    ])
+
+    for (const progress of streetProgress) {
+      byFocus.set(progress.street, { mastered: progress.mastered, total: progress.total })
+    }
+
+    return byFocus
+  }, [coverageStats, streetProgress])
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs uppercase tracking-wide text-brand-text-secondary mb-2">
+        {demoContent.focusHeading}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {drillFocuses
+          .filter((option) => counts.has(option))
+          .map((option) => {
+            const count = counts.get(option)!
+            const isActive = activeFocus === option
+            const label = option === 'all' ? demoContent.focusAllLabel : option
+
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onSelect(option)}
+                aria-pressed={isActive}
+                aria-label={`${label}: ${count.mastered} of ${count.total} pairings proven`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                  isActive
+                    ? 'bg-brand-accent text-brand-primary border-brand-accent font-semibold'
+                    : 'bg-brand-primary text-brand-text-secondary border-transparent hover:border-brand-accent/40'
+                }`}
+              >
+                <span>{label}</span>
+                <span className="tabular-nums opacity-80">
+                  {count.mastered}/{count.total}
+                </span>
+              </button>
+            )
+          })}
+      </div>
+      <p className="text-xs text-brand-text-secondary mt-2">{demoContent.focusHint}</p>
+    </div>
+  )
+}
+
+/**
+ * The coverage grid split by street.
+ *
+ * The whole-grid bar says how much is left to prove; this says which street it
+ * is left on, which is the thing that tells a visitor where to aim the next
+ * drill.
+ */
+function StreetProgressPanel({ streetProgress }: { streetProgress: StreetProgress[] }) {
+  return (
+    <div className="mb-6">
+      <h4 className="font-semibold text-brand-text-primary mb-1">
+        {demoContent.streetProgressHeading}
+      </h4>
+      <p className="text-xs text-brand-text-secondary mb-3">{demoContent.streetProgressHint}</p>
+      <ul className="space-y-2">
+        {streetProgress.map((progress) => (
+          <li
+            key={progress.street}
+            className="flex items-center gap-3 bg-brand-primary rounded-md px-4 py-3"
+          >
+            <span className="w-16 shrink-0 text-sm text-brand-text-primary">{progress.street}</span>
+            <div className="flex-1 bg-brand-surface rounded-full h-2">
+              <div
+                className="h-2 rounded-full bg-brand-accent"
+                style={{ width: `${progress.percentMastered}%` }}
+              />
+            </div>
+            <span className="text-xs tabular-nums text-brand-text-secondary shrink-0 text-right">
+              {progress.mastered}/{progress.total}
+              {progress.open > 0 && (
+                <span className="text-red-400"> &middot; {progress.open} open</span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
