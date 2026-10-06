@@ -10,6 +10,7 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - Keep the homepage mockups in `components/mockups/` presentational unless a task explicitly asks for product logic.
 - The `/demo` spot trainer is the one exception: it runs real strategy logic, but only over hand-authored static data in `lib/spots.ts`. Keep it offline -- no solver, no API calls.
 - Spots are authored in street order, preflop through river, because the coverage grid and the pick-the-read walkthrough both render them in that order.
+- Within a spot, actions are authored from the most passive line to the most aggressive one. The index is an aggression rank, and `missDirection` reads it to say whether a wrong answer was too passive or too aggressive. Re-ordering a spot's actions silently changes that diagnosis.
 - A drill can be focused on one street. A street with fewer pairings than `DRILL_LENGTH` deals a shorter drill rather than borrowing hands from another street.
 - Drill mode seeds its deal from the clock inside an event handler, never during render. Randomising in render would break hydration.
 - Drill mode deals from the coverage grid rather than uniformly: untested pairings first, then the ones still open, then the proven ones. The order inside a tier is seeded, so a drill stays reproducible.
@@ -33,8 +34,8 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - `tailwind.config.ts` and `DESIGN_TOKENS.md` for brand tokens and styling rules
 - `app/page.tsx` and the landing-page sections in `components/`
 - `components/WaitlistForm.tsx`, `app/api/waitlist/route.ts`, and `lib/validation.ts` for the signup flow and its shared validation
-- `lib/spots.ts` and `lib/trainer.ts` for the `/demo` spot trainer data, grading, coverage, per-street progress, drill dealing and focusing, retry drills, leak tracking, and session review
-- `lib/progress.ts` for the persisted training history and the lifetime career rollup behind the demo's career card and coverage grid
+- `lib/spots.ts` and `lib/trainer.ts` for the `/demo` spot trainer data, grading, coverage, per-street progress, drill dealing and focusing, retry and tendency drills, miss-direction diagnosis, leak tracking, and session review
+- `lib/progress.ts` for the persisted training history and the lifetime career rollup behind the demo's career card, coverage grid, and miss-direction panel
 - `lib/validation.test.ts`, `lib/trainer.test.ts`, and `lib/progress.test.ts` for the Vitest suites covering validation, trainer logic, and persistence
 - `system-architecture.md` for future-state context only
 

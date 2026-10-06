@@ -17,10 +17,12 @@ import {
 import {
   buildCoverageDrill,
   buildRetryDrill,
+  buildTendencyDrill,
   drillFocuses,
   findBiggestLeak,
   getRecommendation,
   gradeAnswer,
+  missDirection,
   reviewSession,
   summarizeByOpponent,
   summarizeSession,
@@ -34,6 +36,10 @@ import {
   type ReviewRow,
   type SessionKind,
   type StreetProgress,
+  type StreetTendency,
+  type TendencyDirection,
+  type TendencySide,
+  type TendencySummary,
   type Verdict,
 } from '@/lib/trainer'
 
@@ -41,6 +47,30 @@ const verdictStyles: Record<Verdict, { container: string; text: string; icon: 'c
   optimal: { container: 'bg-green-900/30 border-green-600/50', text: 'text-green-400', icon: 'check' },
   close: { container: 'bg-brand-accent/15 border-brand-accent/50', text: 'text-brand-accent', icon: 'target' },
   mistake: { container: 'bg-red-900/30 border-red-600/50', text: 'text-red-400', icon: 'scale' },
+}
+
+/**
+ * How each miss direction is named and drilled.
+ *
+ * Mirrors `verdictStyles`: the strategy logic hands back a direction, and every
+ * label, hint, and CTA a visitor reads for it lives here.
+ */
+const tendencyCopy: Record<
+  TendencyDirection,
+  { label: string; note: string; drillCta: string; icon: 'arrow-down' | 'arrow-up' }
+> = {
+  passive: {
+    label: demoContent.tendencyPassiveLabel,
+    note: demoContent.tendencyPassiveNote,
+    drillCta: demoContent.tendencyDrillPassiveCta,
+    icon: 'arrow-down',
+  },
+  aggressive: {
+    label: demoContent.tendencyAggressiveLabel,
+    note: demoContent.tendencyAggressiveNote,
+    drillCta: demoContent.tendencyDrillAggressiveCta,
+    icon: 'arrow-up',
+  },
 }
 
 /** A dealt run of hands: a coverage drill, or a replay of the ones you missed. */
@@ -51,6 +81,10 @@ interface DealtSession {
 
 function pluralSessions(count: number): string {
   return count === 1 ? demoContent.careerSessionLabel : demoContent.careerSessionsLabel
+}
+
+function pluralMisses(count: number): string {
+  return count === 1 ? demoContent.tendencyMistakeSingularLabel : demoContent.tendencyMistakeLabel
 }
 
 function formatBb(value: number): string {
@@ -697,6 +731,19 @@ interface CareerPanelProps {
  */
 function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
   const leakHands = useMemo(() => buildRetryDrill(career.openLeaks), [career.openLeaks])
+  /**
+   * The lifetime tendency is measured over every answer ever given, but a
+   * drill can only deal what is still open -- replaying a pairing correctly
+   * closes it without unmaking the habit that lost it the first time. So this
+   * list can be empty while the bias above it is not.
+   */
+  const biasHands = useMemo(
+    () =>
+      career.tendency.bias
+        ? buildTendencyDrill(career.openLeaks, career.tendency.bias.direction)
+        : [],
+    [career.openLeaks, career.tendency.bias],
+  )
   const trend =
     career.latestAccuracy !== null && career.priorAccuracy !== null
       ? career.latestAccuracy - career.priorAccuracy
@@ -767,6 +814,13 @@ function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
       <CoverageGrid coverage={career.coverage} stats={career.coverageStats} />
 
       <StreetProgressPanel streetProgress={career.streetProgress} />
+
+      <TendencyPanel
+        tendency={career.tendency}
+        drillHands={biasHands}
+        onRetry={onRetry}
+        className="mb-6"
+      />
 
       {career.openLeaks.length > 0 ? (
         <>
@@ -979,6 +1033,8 @@ function CareerStat({ label, value, note }: CareerStatProps) {
 
 /** One still-unsolved pairing, named so the visitor knows what they owe. */
 function OpenLeakItem({ row }: { row: ReviewRow }) {
+  const direction = missDirection(row)
+
   return (
     <li className="flex items-start justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
       <div className="min-w-0">
@@ -986,6 +1042,7 @@ function OpenLeakItem({ row }: { row: ReviewRow }) {
         <p className="text-xs text-brand-text-secondary">
           vs {row.opponent.shortLabel} &middot; you played {row.chosenLabel}, best is{' '}
           <span className="text-brand-accent font-semibold">{row.bestLabel}</span>
+          {direction && ` \u00b7 ${tendencyCopy[direction].label.toLowerCase()}`}
         </p>
       </div>
       <span className="text-sm font-semibold text-red-400 tabular-nums shrink-0">
@@ -1003,6 +1060,7 @@ interface ReviewListItemProps {
 function ReviewListItem({ row, index }: ReviewListItemProps) {
   const styles = verdictStyles[row.grade.verdict]
   const isOptimal = row.grade.verdict === 'optimal'
+  const direction = missDirection(row)
 
   return (
     <li className="bg-brand-primary rounded-md p-4">
@@ -1016,6 +1074,7 @@ function ReviewListItem({ row, index }: ReviewListItemProps) {
             <p className="text-xs text-brand-text-secondary">
               {row.spot.street} &middot; vs {row.opponent.shortLabel}
               {row.wasDeviation && ' \u00b7 read overrides the baseline'}
+              {direction && ` \u00b7 ${tendencyCopy[direction].label.toLowerCase()}`}
             </p>
           </div>
         </div>
@@ -1183,6 +1242,178 @@ function StreetProgressPanel({ streetProgress }: { streetProgress: StreetProgres
         ))}
       </ul>
     </div>
+  )
+}
+
+interface TendencyPanelProps {
+  tendency: TendencySummary
+  /** Pairings still open in the biased direction. Empty hides the drill CTA. */
+  drillHands: DealtHand[]
+  onRetry: (hands: DealtHand[]) => void
+  className?: string
+}
+
+/**
+ * Diagnoses the shape of a visitor's mistakes rather than their location.
+ *
+ * The coverage grid and the open-leak list both answer "where do I lose
+ * money". Neither can answer "how", and the answer changes the advice
+ * completely: two players can own the same leak because one folds every river
+ * and the other barrels every river. This is the only panel that separates
+ * them.
+ *
+ * Lives in the career card rather than the session recap because the pattern
+ * needs more than five hands to mean anything, and because the recap always
+ * renders the career card underneath it -- a session-level copy would say the
+ * same thing twice on a visitor's first session.
+ *
+ * Renders nothing without a miss to diagnose; the career card's no-leaks note
+ * already covers that case in its own words.
+ */
+function TendencyPanel({ tendency, drillHands, onRetry, className = '' }: TendencyPanelProps) {
+  if (tendency.missed === 0) return null
+
+  const { passive, aggressive, bias } = tendency
+  // Misses always cost EV, so this is only zero when there are none at all.
+  const totalEvLost = passive.evLost + aggressive.evLost
+  const share = (side: TendencySide) =>
+    totalEvLost === 0 ? 0 : Math.round((side.evLost / totalEvLost) * 100)
+
+  return (
+    <div className={className}>
+      <div className="flex items-baseline justify-between gap-3 mb-1">
+        <h4 className="font-semibold text-brand-text-primary">{demoContent.tendencyHeading}</h4>
+        <span
+          className="text-sm font-semibold text-brand-accent tabular-nums shrink-0"
+          aria-label={`${tendency.missed} of ${tendency.answered} answers left money on the table`}
+          title={`${tendency.missed} of ${tendency.answered} answers left money on the table`}
+        >
+          {tendency.missed}/{tendency.answered}
+        </span>
+      </div>
+      <p className="text-xs text-brand-text-secondary mb-3">{demoContent.tendencyHint}</p>
+
+      <div className="space-y-2 mb-3">
+        <TendencySideRow side={passive} share={share(passive)} isBias={bias?.direction === 'passive'} />
+        <TendencySideRow
+          side={aggressive}
+          share={share(aggressive)}
+          isBias={bias?.direction === 'aggressive'}
+        />
+      </div>
+
+      {bias ? (
+        <p className="text-sm text-brand-text-secondary mb-3">
+          <span className="text-brand-accent font-semibold">{demoContent.tendencyBiasLead}: </span>
+          {tendencyCopy[bias.direction].label.toLowerCase()} on{' '}
+          <span className="tabular-nums">{bias.mistakes}</span> of{' '}
+          <span className="tabular-nums">{tendency.missed}</span> {pluralMisses(tendency.missed)},
+          worth{' '}
+          <span className="text-red-400 font-semibold tabular-nums">{formatBb(-bias.evLost)}</span>.
+        </p>
+      ) : (
+        <p className="text-sm text-brand-text-secondary mb-3">
+          <span className="text-brand-text-primary font-semibold">
+            {demoContent.tendencyBalancedHeading}:{' '}
+          </span>
+          {demoContent.tendencyBalancedNote}
+        </p>
+      )}
+
+      <h5 className="text-sm font-semibold text-brand-text-primary mb-1">
+        {demoContent.tendencyStreetHeading}
+      </h5>
+      <p className="text-xs text-brand-text-secondary mb-2">{demoContent.tendencyStreetHint}</p>
+      <ul className="space-y-2">
+        {tendency.byStreet.map((street) => (
+          <TendencyStreetItem key={street.street} street={street} />
+        ))}
+      </ul>
+
+      {bias &&
+        (drillHands.length > 0 ? (
+          <Button onClick={() => onRetry(drillHands)} className="w-full mt-4">
+            {tendencyCopy[bias.direction].drillCta} ({drillHands.length})
+          </Button>
+        ) : (
+          <p className="text-xs text-brand-text-secondary mt-3">
+            {demoContent.tendencyDrillClosedNote}
+          </p>
+        ))}
+    </div>
+  )
+}
+
+interface TendencySideRowProps {
+  side: TendencySide
+  /** This direction's share of the big blinds lost to misses, 0-100. */
+  share: number
+  isBias: boolean
+}
+
+function TendencySideRow({ side, share, isBias }: TendencySideRowProps) {
+  const copy = tendencyCopy[side.direction]
+
+  return (
+    <div
+      className={`rounded-md px-4 py-3 ${
+        isBias ? 'bg-brand-accent/10 border border-brand-accent/40' : 'bg-brand-primary'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <span className="flex items-center gap-2 min-w-0">
+          <Icon
+            name={copy.icon}
+            size="sm"
+            className={`shrink-0 ${isBias ? 'text-brand-accent' : 'text-brand-text-secondary'}`}
+          />
+          <span
+            className={`text-sm font-semibold ${
+              isBias ? 'text-brand-accent' : 'text-brand-text-primary'
+            }`}
+          >
+            {copy.label}
+          </span>
+        </span>
+        <span className="text-xs text-brand-text-secondary shrink-0">
+          <span className="tabular-nums">{side.mistakes}</span> {pluralMisses(side.mistakes)}{' '}
+          &middot;{' '}
+          <span className={`tabular-nums ${side.evLost > 0 ? 'text-red-400 font-semibold' : ''}`}>
+            {formatBb(-side.evLost)}
+          </span>
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 bg-brand-surface rounded-full h-2">
+          <div
+            className={`h-2 rounded-full ${isBias ? 'bg-brand-accent' : 'bg-brand-text-secondary'}`}
+            style={{ width: `${share}%` }}
+          />
+        </div>
+        <span className="text-xs text-brand-text-secondary tabular-nums shrink-0 w-10 text-right">
+          {share}%
+        </span>
+      </div>
+      <p className="text-xs text-brand-text-secondary mt-2">{copy.note}</p>
+    </div>
+  )
+}
+
+/** One street's split. Named "even both ways" when neither side cost more. */
+function TendencyStreetItem({ street }: { street: StreetTendency }) {
+  return (
+    <li className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
+      <span className="w-16 shrink-0 text-sm text-brand-text-primary">{street.street}</span>
+      <span className="flex-1 min-w-0 text-xs text-brand-text-secondary">
+        {street.bias
+          ? tendencyCopy[street.bias.direction].label.toLowerCase()
+          : demoContent.tendencyStreetBalancedLabel}{' '}
+        &middot; <span className="tabular-nums">{street.missed}</span> {pluralMisses(street.missed)}
+      </span>
+      <span className="text-sm font-semibold text-red-400 tabular-nums shrink-0">
+        {formatBb(-street.evLost)}
+      </span>
+    </li>
   )
 }
 

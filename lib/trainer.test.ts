@@ -4,6 +4,7 @@ import {
   buildCoverage,
   buildCoverageDrill,
   buildRetryDrill,
+  buildTendencyDrill,
   CLOSE_ENOUGH_BB,
   DRILL_LENGTH,
   drillFocuses,
@@ -12,12 +13,14 @@ import {
   getRecommendation,
   getSpot,
   gradeAnswer,
+  missDirection,
   reviewSession,
   summarizeByOpponent,
   summarizeCoverage,
   summarizeLeakProgress,
   summarizeSession,
   summarizeStreets,
+  summarizeTendency,
 } from './trainer'
 
 const cbetSpot = getSpot('btn-cbet-tptk')!
@@ -923,5 +926,251 @@ describe('summarizeCoverage', () => {
     expect(summary.percentMastered).toBe(
       Math.round(((allPairings.length - 1) / allPairings.length) * 100),
     )
+  })
+})
+
+/** The lines that risk no extra chips, which is the passive end of a spot. */
+const passiveActionIds = ['fold', 'check', 'call']
+
+describe('authored aggression order', () => {
+  it.each(spots)('$id authors its passive lines before its aggressive ones', (spot) => {
+    const isPassive = spot.actions.map((action) => passiveActionIds.includes(action.id))
+    const lastPassive = isPassive.lastIndexOf(true)
+    const firstAggressive = isPassive.indexOf(false)
+
+    // Anything but a leading run of passive lines would make an action's index
+    // a meaningless aggression rank, and `missDirection` reads that index.
+    expect(firstAggressive).toBeGreaterThan(-1)
+    expect(lastPassive).toBeLessThan(firstAggressive)
+  })
+})
+
+describe('missDirection', () => {
+  const direction = (spot: typeof cbetSpot, opponentId: 'gto' | 'tag' | 'lag' | 'fish' | 'reg', actionId: string) =>
+    missDirection(reviewSession([gradeAnswer(spot, opponentId, actionId)])[0])
+
+  it('returns null for an optimal answer', () => {
+    expect(direction(cbetSpot, 'gto', 'bet66')).toBeNull()
+  })
+
+  it('calls an answer short of the best line passive', () => {
+    // Checking when a 2/3 c-bet is the max-EV line.
+    expect(direction(cbetSpot, 'gto', 'check')).toBe('passive')
+    // Folding when calling is the max-EV line.
+    expect(direction(riverSpot, 'gto', 'fold')).toBe('passive')
+  })
+
+  it('calls an answer past the best line aggressive', () => {
+    expect(direction(cbetSpot, 'gto', 'overbet')).toBe('aggressive')
+    expect(direction(riverSpot, 'gto', 'raise')).toBe('aggressive')
+  })
+
+  it('reads a wrong bet size, not just a wrong line', () => {
+    // Both are bets; only the size is wrong, and it is wrong in both directions.
+    expect(direction(cbetSpot, 'fish', 'bet66')).toBe('passive')
+    expect(direction(cbetSpot, 'reg', 'bet66')).toBe('aggressive')
+  })
+
+  it("counts a 'close' answer as a miss", () => {
+    const grade = gradeAnswer(cbetSpot, 'reg', 'bet66')
+
+    expect(grade.verdict).toBe('close')
+    expect(grade.evLoss).toBeGreaterThan(0)
+    expect(missDirection(reviewSession([grade])[0])).toBe('aggressive')
+  })
+
+  it('returns null when the chosen action no longer resolves', () => {
+    const [row] = reviewSession([
+      { ...gradeAnswer(cbetSpot, 'gto', 'check'), chosenActionId: 'retired-action' },
+    ])
+
+    expect(missDirection(row)).toBeNull()
+  })
+})
+
+describe('summarizeTendency', () => {
+  it('reports nothing to diagnose for an empty history', () => {
+    expect(summarizeTendency([])).toEqual({
+      answered: 0,
+      missed: 0,
+      passive: { direction: 'passive', mistakes: 0, evLost: 0 },
+      aggressive: { direction: 'aggressive', mistakes: 0, evLost: 0 },
+      bias: null,
+      byStreet: [],
+    })
+  })
+
+  it('counts answered spots but only takes a direction from the misses', () => {
+    const tendency = summarizeTendency(
+      reviewSession([
+        gradeAnswer(cbetSpot, 'gto', 'bet66'),
+        gradeAnswer(cbetSpot, 'gto', 'check'),
+        gradeAnswer(riverSpot, 'gto', 'raise'),
+      ]),
+    )
+
+    expect(tendency.answered).toBe(3)
+    expect(tendency.missed).toBe(2)
+    expect(tendency.passive.mistakes).toBe(1)
+    expect(tendency.aggressive.mistakes).toBe(1)
+  })
+
+  it('totals the big blinds given up in each direction', () => {
+    const tendency = summarizeTendency(
+      reviewSession([
+        gradeAnswer(cbetSpot, 'gto', 'check'),
+        gradeAnswer(riverSpot, 'gto', 'fold'),
+        gradeAnswer(riverSpot, 'gto', 'raise'),
+      ]),
+    )
+
+    expect(tendency.passive).toEqual({ direction: 'passive', mistakes: 2, evLost: 0.65 })
+    expect(tendency.aggressive).toEqual({ direction: 'aggressive', mistakes: 1, evLost: 2.35 })
+  })
+
+  it('names the costlier direction even when it has fewer mistakes', () => {
+    const tendency = summarizeTendency(
+      reviewSession([
+        gradeAnswer(cbetSpot, 'gto', 'check'),
+        gradeAnswer(riverSpot, 'gto', 'fold'),
+        gradeAnswer(riverSpot, 'gto', 'raise'),
+      ]),
+    )
+
+    expect(tendency.bias).toEqual({ direction: 'aggressive', mistakes: 1, evLost: 2.35 })
+  })
+
+  it('breaks an equal cost on the number of mistakes', () => {
+    // 0.50 BB passive in one spot against 0.25 + 0.25 BB aggressive in two.
+    const tendency = summarizeTendency(
+      reviewSession([
+        gradeAnswer(cbetSpot, 'gto', 'check'),
+        gradeAnswer(riverSpot, 'reg', 'call'),
+        gradeAnswer(getSpot('btn-3bet-aqo')!, 'tag', 'threebet'),
+      ]),
+    )
+
+    expect(tendency.passive.evLost).toBe(tendency.aggressive.evLost)
+    expect(tendency.bias?.direction).toBe('aggressive')
+  })
+
+  it('reports no bias when both directions cost the same across the same count', () => {
+    const tendency = summarizeTendency(
+      reviewSession([
+        gradeAnswer(riverSpot, 'gto', 'fold'),
+        gradeAnswer(cbetSpot, 'reg', 'bet66'),
+      ]),
+    )
+
+    expect(tendency.passive.evLost).toBe(0.15)
+    expect(tendency.aggressive.evLost).toBe(0.15)
+    expect(tendency.bias).toBeNull()
+  })
+
+  it('splits the misses by street, in the order a hand is played', () => {
+    const tendency = summarizeTendency(
+      reviewSession([
+        gradeAnswer(riverSpot, 'gto', 'fold'),
+        gradeAnswer(getSpot('btn-3bet-aqo')!, 'gto', 'jam'),
+        gradeAnswer(cbetSpot, 'gto', 'check'),
+      ]),
+    )
+
+    expect(tendency.byStreet.map((street) => street.street)).toEqual(['Preflop', 'Flop', 'River'])
+    expect(tendency.byStreet.map((street) => street.bias?.direction)).toEqual([
+      'aggressive',
+      'passive',
+      'passive',
+    ])
+  })
+
+  it('keeps a street bias independent of the overall bias', () => {
+    const tendency = summarizeTendency(
+      reviewSession([
+        // One expensive preflop jam outweighs two cheap passive river folds.
+        gradeAnswer(getSpot('btn-3bet-aqo')!, 'gto', 'jam'),
+        gradeAnswer(riverSpot, 'gto', 'fold'),
+        gradeAnswer(getSpot('btn-river-bluff-ace-high')!, 'gto', 'bet50'),
+      ]),
+    )
+
+    expect(tendency.bias?.direction).toBe('aggressive')
+    const river = tendency.byStreet.find((street) => street.street === 'River')!
+    expect(river).toMatchObject({ missed: 2, evLost: 0.65 })
+    expect(river.bias?.direction).toBe('passive')
+  })
+
+  it("adds each street's misses up to the whole", () => {
+    const rows = reviewSession(allPairings.map(gradeBadly))
+    const tendency = summarizeTendency(rows)
+
+    expect(tendency.byStreet.reduce((total, street) => total + street.missed, 0)).toBe(
+      tendency.missed,
+    )
+    expect(tendency.passive.mistakes + tendency.aggressive.mistakes).toBe(tendency.missed)
+  })
+
+  it('leaves a clean history with no bias to fix', () => {
+    const tendency = summarizeTendency(reviewSession(allPairings.map(gradeOptimally)))
+
+    expect(tendency.answered).toBe(allPairings.length)
+    expect(tendency.missed).toBe(0)
+    expect(tendency.bias).toBeNull()
+    expect(tendency.byStreet).toEqual([])
+  })
+})
+
+describe('buildTendencyDrill', () => {
+  const rows = () =>
+    reviewSession([
+      gradeAnswer(cbetSpot, 'gto', 'check'),
+      gradeAnswer(riverSpot, 'gto', 'raise'),
+      gradeAnswer(riverSpot, 'lag', 'fold'),
+      gradeAnswer(cbetSpot, 'tag', 'bet66'),
+    ])
+
+  it('deals only the pairings missed in the asked direction', () => {
+    expect(buildTendencyDrill(rows(), 'passive').map(pairingKey)).toEqual([
+      'btn-cbet-tptk/gto',
+      'bb-river-bluffcatch/lag',
+    ])
+    expect(buildTendencyDrill(rows(), 'aggressive').map(pairingKey)).toEqual([
+      'bb-river-bluffcatch/gto',
+    ])
+  })
+
+  it('deals nothing when no answer missed that way', () => {
+    const clean = reviewSession([gradeAnswer(cbetSpot, 'gto', 'bet66')])
+
+    expect(buildTendencyDrill(clean, 'passive')).toEqual([])
+    expect(buildTendencyDrill(clean, 'aggressive')).toEqual([])
+  })
+
+  it('splits the full retry drill between the two directions', () => {
+    const all = buildRetryDrill(rows()).map(pairingKey).sort()
+    const split = [
+      ...buildTendencyDrill(rows(), 'passive'),
+      ...buildTendencyDrill(rows(), 'aggressive'),
+    ]
+      .map(pairingKey)
+      .sort()
+
+    expect(split).toEqual(all)
+  })
+
+  it('inherits the ordering of the rows it is given', () => {
+    // `summarizeLeakProgress` hands back open pairings costliest first, so a
+    // career-level tendency drill comes out in that order too.
+    const career = summarizeLeakProgress(
+      reviewSession([
+        gradeAnswer(riverSpot, 'gto', 'fold'),
+        gradeAnswer(cbetSpot, 'gto', 'check'),
+      ]),
+    )
+
+    expect(buildTendencyDrill(career.open, 'passive').map(pairingKey)).toEqual([
+      'btn-cbet-tptk/gto',
+      'bb-river-bluffcatch/gto',
+    ])
   })
 })

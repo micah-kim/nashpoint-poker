@@ -289,6 +289,57 @@ describe('summarizeCareer', () => {
     expect(onStreet('Preflop').mastered).toBe(0)
     expect(onStreet('Preflop').untested).toBe(onStreet('Preflop').total)
   })
+
+  it('leaves an untouched career with no tendency to diagnose', () => {
+    expect(summarizeCareer(emptyHistory).tendency).toMatchObject({
+      answered: 0,
+      missed: 0,
+      bias: null,
+      byStreet: [],
+    })
+  })
+
+  it('diagnoses the direction of the misses across every session', () => {
+    const career = summarizeCareer(
+      historyOf(
+        // Calling a river bet that should be folded is the aggressive miss.
+        session([gradeAnswer(riverSpot, 'tag', 'call')]),
+        session([gradeAnswer(cbetSpot, 'gto', 'check')], 'drill'),
+      ),
+    )
+
+    expect(career.tendency.answered).toBe(2)
+    expect(career.tendency.missed).toBe(2)
+    expect(career.tendency.aggressive.mistakes).toBe(1)
+    expect(career.tendency.passive.mistakes).toBe(1)
+    expect(career.tendency.bias?.direction).toBe('aggressive')
+    expect(career.tendency.byStreet.map((street) => street.street)).toEqual(['Flop', 'River'])
+  })
+
+  it('keeps a lifetime tendency after the pairing behind it is closed', () => {
+    const career = summarizeCareer(
+      appendSession(
+        historyOf(session([gradeAnswer(cbetSpot, 'gto', 'check')])),
+        session([bestAnswer(cbetSpot, 'gto')], 'retry'),
+      ),
+    )
+
+    // The pairing is proven again, but the habit that lost it still happened.
+    expect(career.openLeaks).toEqual([])
+    expect(career.closedLeaks).toBe(1)
+    expect(career.tendency.passive.mistakes).toBe(1)
+    expect(career.tendency.bias?.direction).toBe('passive')
+  })
+
+  it('agrees with the EV it lost on the costlier side', () => {
+    const career = summarizeCareer(
+      historyOf(session([gradeAnswer(riverSpot, 'tag', 'call'), gradeAnswer(cbetSpot, 'gto', 'check')])),
+    )
+
+    expect(career.tendency.passive.evLost + career.tendency.aggressive.evLost).toBeCloseTo(
+      career.evLost,
+    )
+  })
 })
 
 describe('browser storage', () => {

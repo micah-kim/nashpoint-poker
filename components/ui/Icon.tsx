@@ -1,4 +1,6 @@
 import {
+  ArrowDown,
+  ArrowUp,
   Search,
   Gamepad2,
   HelpCircle,
@@ -17,6 +19,8 @@ import {
 } from 'lucide-react'
 
 export type IconName =
+  | 'arrow-down'
+  | 'arrow-up'
   | 'search'
   | 'gamepad'
   | 'help'
@@ -33,6 +37,8 @@ export type IconName =
   | 'refresh'
 
 const iconMap: Record<IconName, LucideIcon> = {
+  'arrow-down': ArrowDown,
+  'arrow-up': ArrowUp,
   search: Search,
   gamepad: Gamepad2,
   help: HelpCircle,
