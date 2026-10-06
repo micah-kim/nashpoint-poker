@@ -25,6 +25,16 @@ export interface OpponentProfile {
   summary: string
 }
 
+/**
+ * One line a spot offers.
+ *
+ * A spot's actions are authored from the most passive line to the most
+ * aggressive one -- fold or check, then call, then bet and raise sizes
+ * ascending. The index is therefore an aggression rank, which is what
+ * `missDirection` in `lib/trainer.ts` reads to say whether a wrong answer was
+ * too passive or too aggressive. Re-ordering a spot's actions changes that
+ * diagnosis, so keep new spots in the same order.
+ */
 export interface SpotAction {
   id: string
   label: string

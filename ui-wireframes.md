@@ -63,7 +63,7 @@ Side‑by‑side:
 - Session summary: accuracy, spots nailed, EV left on the table  
 - Biggest-leak callout, or a clean-sheet note when every line was max-EV  
 - Per-read breakdown: each opponent faced, spots optimal, EV lost, worst read first  
-- Hand-by-hand review: each spot, the opponent faced, your line vs the best line, and its EV cost  
+- Hand-by-hand review: each spot, the opponent faced, your line vs the best line, its EV cost, and whether the miss was too passive or too aggressive  
 - Retry CTA: "Drill the ones I missed (n)" when any hand gave up EV, replaying just those spot/read pairings  
 - Retry drill: same layout, read shown read-only, mode note explains it is a replay of the missed hands  
 - Restart controls: re-run / re-deal / run the retry hands back, plus a switch to the other mode  
@@ -73,5 +73,6 @@ Side‑by‑side:
   - The read that has cost the most across every session
   - Coverage grid: one row per spot, one column per read, each cell untested / still open / proven, with a proven-percentage bar, a legend with counts, and a star on the pairings where the read overrides the baseline
   - Street-by-street panel: one bar per street with its proven/total count and any pairings still open
-  - Leaks closed, and the list of pairings still open with the line you played vs the best line
+  - "Which way you miss" panel: a row per direction (too passive / too aggressive) with its miss count, EV cost, and share of the damage, the heavier side highlighted; a one-line bias verdict; the same split per street; and a "Drill the ones I played too <direction>" CTA for the open pairings missed that way, replaced by a note when none are left open
+  - Leaks closed, and the list of pairings still open with the line you played vs the best line and the direction it missed in
   - "Drill my open leaks (n)" CTA, and a "Reset history" control that forgets everything  

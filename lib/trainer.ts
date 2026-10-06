@@ -551,3 +551,167 @@ export function buildCoverageDrill(
     .slice(0, DRILL_LENGTH)
     .map((cell) => ({ spot: cell.spot, opponentId: cell.opponent.id }))
 }
+
+/**
+ * Which side of the max-EV line a wrong answer fell on.
+ *
+ * Reads the authored action order in `lib/spots.ts`, which runs from the most
+ * passive line to the most aggressive one, so an action's index is its
+ * aggression rank.
+ */
+export type TendencyDirection = 'passive' | 'aggressive'
+
+/**
+ * Which way one answer missed, or null when it did not miss.
+ *
+ * `evLoss > 0` guarantees the chosen action was not the best one -- a tie in
+ * adjusted EV resolves to the earlier action and grades as optimal -- so a
+ * miss always has a direction. Returns null for a grade whose actions no
+ * longer resolve, the same way the rest of this module degrades instead of
+ * throwing on data an older deploy wrote.
+ */
+export function missDirection(row: ReviewRow): TendencyDirection | null {
+  if (row.grade.evLoss <= 0) return null
+
+  const rank = (actionId: string) => row.spot.actions.findIndex((action) => action.id === actionId)
+  const chosen = rank(row.grade.chosenActionId)
+  const best = rank(row.grade.bestActionId)
+
+  if (chosen < 0 || best < 0) return null
+
+  return chosen < best ? 'passive' : 'aggressive'
+}
+
+/** What missing in one direction has cost. */
+export interface TendencySide {
+  direction: TendencyDirection
+  /** Answers that missed this way. */
+  mistakes: number
+  /** Big blinds given up missing this way. */
+  evLost: number
+}
+
+/** How one street's misses split, because a bias is often local to a street. */
+export interface StreetTendency {
+  street: Street
+  /** Answers on this street that gave up EV. */
+  missed: number
+  passive: TendencySide
+  aggressive: TendencySide
+  /** Total big blinds given up on this street. */
+  evLost: number
+  /** The costlier direction here, or null when the two cost the same. */
+  bias: TendencySide | null
+}
+
+export interface TendencySummary {
+  /** Answers graded, including the ones that were right. */
+  answered: number
+  /** Answers that gave up EV. A tendency is only measured over these. */
+  missed: number
+  passive: TendencySide
+  aggressive: TendencySide
+  /** The costlier direction overall, or null with no misses or an exact tie. */
+  bias: TendencySide | null
+  /** Streets with at least one miss, in the order a hand is played. */
+  byStreet: StreetTendency[]
+}
+
+function emptySide(direction: TendencyDirection): TendencySide {
+  return { direction, mistakes: 0, evLost: 0 }
+}
+
+/**
+ * The costlier of the two directions, or null when there is nothing to name.
+ *
+ * Big blinds decide it rather than miss counts, because one expensive river
+ * fold is a worse habit than two cheap preflop over-folds. Count is only the
+ * tie-break; a dead heat on both has no bias to report.
+ */
+function pickBias(passive: TendencySide, aggressive: TendencySide): TendencySide | null {
+  if (passive.mistakes === 0 && aggressive.mistakes === 0) return null
+  if (passive.evLost !== aggressive.evLost) {
+    return passive.evLost > aggressive.evLost ? passive : aggressive
+  }
+  if (passive.mistakes !== aggressive.mistakes) {
+    return passive.mistakes > aggressive.mistakes ? passive : aggressive
+  }
+
+  return null
+}
+
+/**
+ * Diagnoses the shape of a player's mistakes rather than their location.
+ *
+ * `summarizeLeakProgress` and `buildCoverage` say which pairings cost money;
+ * this says what the wrong answers had in common. Two players can own the same
+ * open leaks for opposite reasons -- one folds every river, the other barrels
+ * every river -- and the fix is the opposite advice, which no pairing list can
+ * express. Correct answers are counted in `answered` but have no direction, so
+ * they never pull the bias either way.
+ */
+export function summarizeTendency(rows: ReviewRow[]): TendencySummary {
+  const sides: Record<TendencyDirection, TendencySide> = {
+    passive: emptySide('passive'),
+    aggressive: emptySide('aggressive'),
+  }
+  const byStreet = new Map<Street, StreetTendency>()
+
+  for (const row of rows) {
+    const direction = missDirection(row)
+
+    if (!direction) continue
+
+    const side = sides[direction]
+    side.mistakes += 1
+    side.evLost = roundBb(side.evLost + row.grade.evLoss)
+
+    const street =
+      byStreet.get(row.spot.street) ??
+      ({
+        street: row.spot.street,
+        missed: 0,
+        passive: emptySide('passive'),
+        aggressive: emptySide('aggressive'),
+        evLost: 0,
+        bias: null,
+      } satisfies StreetTendency)
+
+    street.missed += 1
+    street.evLost = roundBb(street.evLost + row.grade.evLoss)
+    street[direction].mistakes += 1
+    street[direction].evLost = roundBb(street[direction].evLost + row.grade.evLoss)
+    byStreet.set(row.spot.street, street)
+  }
+
+  return {
+    answered: rows.length,
+    missed: sides.passive.mistakes + sides.aggressive.mistakes,
+    passive: sides.passive,
+    aggressive: sides.aggressive,
+    bias: pickBias(sides.passive, sides.aggressive),
+    byStreet: streets
+      .filter((street) => byStreet.has(street))
+      .map((street) => {
+        const tendency = byStreet.get(street)!
+
+        return { ...tendency, bias: pickBias(tendency.passive, tendency.aggressive) }
+      }),
+  }
+}
+
+/**
+ * Deals back the pairings that missed in one direction.
+ *
+ * Turns the diagnosis into a drill: `summarizeTendency` says you keep calling
+ * where a raise prints, this hands you the hands you called. Reuses
+ * `buildRetryDrill`, so dedup and ordering are the same -- pass a session's
+ * rows for the order they were faced, or a career's open leaks for costliest
+ * first.
+ */
+export function buildTendencyDrill(
+  rows: ReviewRow[],
+  direction: TendencyDirection,
+): DealtHand[] {
+  return buildRetryDrill(rows.filter((row) => missDirection(row) === direction))
+}

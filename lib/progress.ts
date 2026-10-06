@@ -22,6 +22,7 @@ import {
   summarizeLeakProgress,
   summarizeSession,
   summarizeStreets,
+  summarizeTendency,
   type CoverageCell,
   type CoverageSummary,
   type Grade,
@@ -29,6 +30,7 @@ import {
   type ReviewRow,
   type SessionKind,
   type StreetProgress,
+  type TendencySummary,
   type Verdict,
 } from './trainer'
 
@@ -70,6 +72,12 @@ export interface CareerSummary {
   coverageStats: CoverageSummary
   /** The same grid split by street, preflop through river. */
   streetProgress: StreetProgress[]
+  /**
+   * Which way every wrong answer ever given missed, over all grades rather
+   * than the latest attempt at each pairing: a habit is a history, so closing
+   * a leak does not erase the fact that folding is how you got there.
+   */
+  tendency: TendencySummary
   /** Accuracy of the most recent session, or null when nothing is stored. */
   latestAccuracy: number | null
   /** Accuracy before the most recent session, or null when it was the first. */
@@ -203,6 +211,7 @@ export function summarizeCareer(history: TrainingHistory): CareerSummary {
     coverage,
     coverageStats: summarizeCoverage(coverage),
     streetProgress: summarizeStreets(coverage),
+    tendency: summarizeTendency(rows),
     latestAccuracy: latest ? summarizeSession(latest.grades).accuracy : null,
     priorAccuracy: prior.length > 0 ? summarizeSession(prior).accuracy : null,
   }
