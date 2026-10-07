@@ -235,25 +235,66 @@ describe('summarizeCareer', () => {
     const career = summarizeCareer(
       historyOf(
         session([gradeAnswer(riverSpot, 'tag', 'call')]),
-        session([bestAnswer(cbetSpot, 'fish')], 'drill'),
+        session([bestAnswer(cbetSpot, 'fish'), bestAnswer(cbetSpot, 'fish')], 'drill'),
       ),
     )
     const status = (spotId: string, opponentId: string) =>
       career.coverage.find((cell) => cell.spot.id === spotId && cell.opponent.id === opponentId)
         ?.status
 
-    expect(career.coverageStats).toMatchObject({ played: 2, mastered: 1, open: 1 })
+    expect(career.coverageStats).toMatchObject({ played: 2, mastered: 1, learning: 0, open: 1 })
     expect(status('bb-river-bluffcatch', 'tag')).toBe('open')
     expect(status('btn-cbet-tptk', 'fish')).toBe('mastered')
     expect(status('btn-cbet-tptk', 'gto')).toBe('untested')
   })
 
-  it('masters a grid cell once the leak behind it is replayed correctly', () => {
+  /**
+   * The reason mastery reps need the persisted history: the two clean reps a
+   * pairing owes can land in different visits, so only a career-wide streak
+   * can tell a proven pairing from a lucky one.
+   */
+  it('proves a grid cell over two sessions, not one', () => {
     const missed = historyOf(session([gradeAnswer(riverSpot, 'tag', 'call')]))
-    const fixed = appendSession(missed, session([bestAnswer(riverSpot, 'tag')], 'retry'))
+    const replayed = appendSession(missed, session([bestAnswer(riverSpot, 'tag')], 'retry'))
+    const confirmed = appendSession(
+      replayed,
+      session([bestAnswer(riverSpot, 'tag')], 'confirm'),
+    )
 
-    expect(summarizeCareer(missed).coverageStats).toMatchObject({ played: 1, open: 1, mastered: 0 })
-    expect(summarizeCareer(fixed).coverageStats).toMatchObject({ played: 1, open: 0, mastered: 1 })
+    expect(summarizeCareer(missed).coverageStats).toMatchObject({
+      played: 1,
+      open: 1,
+      learning: 0,
+      mastered: 0,
+    })
+    expect(summarizeCareer(replayed).coverageStats).toMatchObject({
+      played: 1,
+      open: 0,
+      learning: 1,
+      mastered: 0,
+    })
+    expect(summarizeCareer(confirmed).coverageStats).toMatchObject({
+      played: 1,
+      open: 0,
+      learning: 0,
+      mastered: 1,
+    })
+  })
+
+  /**
+   * Closing a leak and proving a pairing are deliberately different bars: one
+   * clean answer settles the EV, two in a row settle whether it was a guess.
+   */
+  it('closes a leak on one clean replay while the grid still wants another', () => {
+    const fixed = appendSession(
+      historyOf(session([gradeAnswer(riverSpot, 'tag', 'call')])),
+      session([bestAnswer(riverSpot, 'tag')], 'retry'),
+    )
+    const career = summarizeCareer(fixed)
+
+    expect(career.openLeaks).toEqual([])
+    expect(career.closedLeaks).toBe(1)
+    expect(career.coverageStats.mastered).toBe(0)
   })
 
   it('keeps the coverage grid and the open leaks telling the same story', () => {
@@ -277,11 +318,14 @@ describe('summarizeCareer', () => {
     expect(career.streetProgress.length).toBeGreaterThan(1)
     expect(sum((entry) => entry.total)).toBe(career.coverage.length)
     expect(sum((entry) => entry.mastered)).toBe(career.coverageStats.mastered)
+    expect(sum((entry) => entry.learning)).toBe(career.coverageStats.learning)
     expect(sum((entry) => entry.open)).toBe(career.coverageStats.open)
   })
 
   it('credits each street with only the pairings played on it', () => {
-    const career = summarizeCareer(historyOf(session([bestAnswer(riverSpot, 'fish')])))
+    const career = summarizeCareer(
+      historyOf(session([bestAnswer(riverSpot, 'fish'), bestAnswer(riverSpot, 'fish')])),
+    )
     const onStreet = (street: string) =>
       career.streetProgress.find((entry) => entry.street === street)!
 

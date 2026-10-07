@@ -62,7 +62,7 @@ nashpoint-poker/
 │   ├── hooks.ts                  # Shared React hooks
 │   ├── progress.ts               # localStorage training history and career rollup
 │   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
-│   ├── trainer.ts                # Grading, coverage, street progress, drill dealing, retry and tendency drills, miss-direction diagnosis, leak tracking, session review
+│   ├── trainer.ts                # Grading, coverage, mastery reps, street progress, drill dealing, retry, confirm and tendency drills, miss-direction diagnosis, leak tracking, session review
 │   └── validation.ts             # Shared waitlist validation
 │
 ├── 📚 Documentation
@@ -118,7 +118,7 @@ nashpoint-poker/
 #### `app/demo/page.tsx`
 - Interactive spot trainer, rendered by `components/DemoContent.tsx`
 - Seven hand-authored spots across all four streets and five opponent profiles (`lib/spots.ts`), each spot's actions authored most passive to most aggressive
-- Three modes: pick the read yourself, take a dealt drill of up to five spot/read pairings drawn from the gaps in your coverage (`buildCoverageDrill`), or drill the leaks still open from earlier visits
+- Four modes: pick the read yourself, take a dealt drill of up to five spot/read pairings drawn from the gaps in your coverage (`buildCoverageDrill`), drill the leaks still open from earlier visits, or confirm the pairings you have answered right exactly once (`buildConfirmDrill`)
 - A drill can be aimed at one street, which deals only that street's pairings (`DrillFocus`)
 - Answers are graded client-side against the EV table (`lib/trainer.ts`)
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
@@ -127,7 +127,8 @@ nashpoint-poker/
 - The recap can re-deal just the hands that gave up EV as a retry drill (`buildRetryDrill`)
 - Finished sessions are kept in `localStorage` so a returning visitor still has their leaks (`lib/progress.ts`)
 - The career card shows lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open (`summarizeCareer`, `summarizeLeakProgress`)
-- The coverage grid shows every spot/read pairing as untested, open, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`)
+- The coverage grid shows every spot/read pairing as untested, open, learning, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`)
+- Mastery takes `MASTERY_REPS` consecutive optimal answers; a pairing clean once but not twice sits in `learning`, which is what the confirm drill deals
 - Per-street progress splits that grid preflop through river, both on the drill chips and in the recap (`summarizeStreets`)
 - The career card also diagnoses the direction of the misses -- too passive or too aggressive, overall and per street -- and deals back the open pairings missed that way (`missDirection`, `summarizeTendency`, `buildTendencyDrill`)
 - No API calls, no solver dependency, and no account -- history never leaves the browser

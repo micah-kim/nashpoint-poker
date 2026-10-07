@@ -81,10 +81,11 @@ A playable slice of the product, running entirely in the browser.
 
 Training modes:
 - **Pick the read** - walk the authored spots against an opponent you choose, preflop through river
-- **Deal me a drill** - up to five spot/read pairings you do not get to choose, dealt from the gaps in your coverage: never-seen pairings first, then the ones still open
+- **Deal me a drill** - up to five spot/read pairings you do not get to choose, dealt from the gaps in your coverage: never-seen pairings first, then the ones still open, then the ones answered right only once
 - **Street focus** - aim that drill at Preflop, Flop, Turn, or River and every dealt hand comes from that street
 - **Retry drill** - offered from the recap, replays only the hands that gave up EV
 - **Drill my open leaks** - offered once this browser has unsolved pairings, replays the leaks still open across every past visit
+- **Confirm what I guessed** - offered once a pairing has been answered right exactly once, re-deals those pairings so a second clean rep can prove them
 - **Drill the direction you miss in** - offered from the training history once a bias shows, replays only the open pairings you got wrong that way
 
 Sections:
@@ -97,11 +98,12 @@ Sections:
 - Session summary with hand-by-hand review, a per-read breakdown, and a biggest-leak callout  
 - Retry CTA on the recap that re-deals the missed spot/read pairings  
 - Training history card with lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open  
-- Coverage grid of every spot against every read, marking what is untested, still open, and proven  
+- Coverage grid of every spot against every read, marking what is untested, still open, answered right once, and proven  
 - Per-street progress bars showing which street of your game has never been tested  
 - Miss-direction panel naming whether wrong answers were too passive or too aggressive, what each direction has cost, and how that splits per street  
 - Waitlist CTA  
 - **Data:** seven static, hand-authored spots covering every street, each one's actions authored from the most passive line to the most aggressive. Teaching numbers, not solver output. No solver, no API calls, no backend  
+- **Mastery:** a pairing counts as proven only after two consecutive optimal answers. A spot offers two to four lines, so one clean answer is inside guessing range; a miss resets the run
 - **Storage:** finished sessions are kept in `localStorage` only. No account, and nothing leaves the device
 
 ### 5. Global Navigation + Footer

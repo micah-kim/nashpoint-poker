@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { opponentProfiles, spots, streets } from './spots'
 import {
+  buildConfirmDrill,
   buildCoverage,
   buildCoverageDrill,
   buildRetryDrill,
@@ -13,6 +14,7 @@ import {
   getRecommendation,
   getSpot,
   gradeAnswer,
+  MASTERY_REPS,
   missDirection,
   reviewSession,
   summarizeByOpponent,
@@ -39,6 +41,14 @@ function gradeOptimally(pairing: (typeof allPairings)[number]) {
   const { exploitBestActionId } = getRecommendation(pairing.spot, pairing.opponentId)
 
   return gradeAnswer(pairing.spot, pairing.opponentId, exploitBestActionId)
+}
+
+/**
+ * Grades a pairing optimally `MASTERY_REPS` times, so it comes back proven
+ * rather than merely clean on its latest attempt.
+ */
+function proveFully(pairing: (typeof allPairings)[number]) {
+  return Array.from({ length: MASTERY_REPS }, () => gradeOptimally(pairing))
 }
 
 /** Grades a pairing with its worst line, so it comes back as an open leak. */
@@ -330,7 +340,7 @@ describe('buildCoverageDrill', () => {
   it('deals the pairings a visitor has never seen before any they have proven', () => {
     const unseen = allPairings.slice(0, 2)
     const played = allPairings.slice(2)
-    const coverage = buildCoverage(reviewSession(played.map(gradeOptimally)))
+    const coverage = buildCoverage(reviewSession(played.flatMap(proveFully)))
 
     for (const seed of [3, 17, 2026]) {
       const dealt = buildCoverageDrill(coverage, seed).map(pairingKey)
@@ -343,7 +353,7 @@ describe('buildCoverageDrill', () => {
 
   it('deals a still-open leak before a pairing already proven', () => {
     const [leaked, ...proven] = allPairings
-    const grades = [gradeBadly(leaked), ...proven.map(gradeOptimally)]
+    const grades = [gradeBadly(leaked), ...proven.flatMap(proveFully)]
     const coverage = buildCoverage(reviewSession(grades))
 
     expect(summarizeCoverage(coverage).untested).toBe(0)
@@ -354,11 +364,27 @@ describe('buildCoverageDrill', () => {
   })
 
   it('falls back to the whole grid once every pairing is proven', () => {
-    const coverage = buildCoverage(reviewSession(allPairings.map(gradeOptimally)))
+    const coverage = buildCoverage(reviewSession(allPairings.flatMap(proveFully)))
     const dealt = buildCoverageDrill(coverage, 11)
 
+    expect(summarizeCoverage(coverage).mastered).toBe(allPairings.length)
     expect(dealt).toHaveLength(DRILL_LENGTH)
     expect(new Set(dealt.map(pairingKey)).size).toBe(dealt.length)
+  })
+
+  it('deals a pairing nailed once ahead of one already proven twice', () => {
+    const [unconfirmed, ...proven] = allPairings
+    const grades = [gradeOptimally(unconfirmed), ...proven.flatMap(proveFully)]
+    const coverage = buildCoverage(reviewSession(grades))
+
+    expect(summarizeCoverage(coverage)).toMatchObject({ untested: 0, open: 0, learning: 1 })
+
+    for (const seed of [6, 31, 777]) {
+      expect(
+        buildCoverageDrill(coverage, seed).map(pairingKey)[0],
+        `seed ${seed} skipped the unconfirmed pairing`,
+      ).toBe(pairingKey(unconfirmed))
+    }
   })
 })
 
@@ -396,7 +422,7 @@ describe('buildCoverageDrill with a street focus', () => {
     const street = streets[0]
     const onStreet = allPairings.filter((pairing) => pairing.spot.street === street)
     const [unseen, ...played] = onStreet
-    const coverage = buildCoverage(reviewSession(played.map(gradeOptimally)))
+    const coverage = buildCoverage(reviewSession(played.flatMap(proveFully)))
 
     for (const seed of [4, 61, 909]) {
       expect(buildCoverageDrill(coverage, seed, street).map(pairingKey)[0]).toBe(
@@ -412,8 +438,8 @@ describe('buildCoverageDrill with a street focus', () => {
     const elsewhere = allPairings.filter((pairing) => pairing.spot.street !== street)
     const grades = [
       gradeBadly(leaked),
-      ...rest.map(gradeOptimally),
-      ...elsewhere.map(gradeOptimally),
+      ...rest.flatMap(proveFully),
+      ...elsewhere.flatMap(proveFully),
     ]
     const coverage = buildCoverage(reviewSession(grades))
 
@@ -461,6 +487,7 @@ describe('summarizeStreets', () => {
       expect(progress).toMatchObject({
         untested: progress.total,
         mastered: 0,
+        learning: 0,
         open: 0,
         percentMastered: 0,
       })
@@ -469,12 +496,22 @@ describe('summarizeStreets', () => {
 
   it('counts a mastered pairing against its own street only', () => {
     const pairing = allPairings[0]
-    const coverage = buildCoverage(reviewSession([gradeOptimally(pairing)]))
+    const coverage = buildCoverage(reviewSession(proveFully(pairing)))
     const progress = summarizeStreets(coverage)
     const played = progress.find((entry) => entry.street === pairing.spot.street)!
 
     expect(played.mastered).toBe(1)
     expect(progress.filter((entry) => entry.mastered > 0)).toEqual([played])
+  })
+
+  it('counts a single clean rep on its street as learning, not proven', () => {
+    const pairing = allPairings[0]
+    const coverage = buildCoverage(reviewSession([gradeOptimally(pairing)]))
+    const progress = summarizeStreets(coverage)
+    const played = progress.find((entry) => entry.street === pairing.spot.street)!
+
+    expect(played).toMatchObject({ learning: 1, mastered: 0, open: 0 })
+    expect(progress.filter((entry) => entry.learning > 0)).toEqual([played])
   })
 
   it('counts a pairing that gave up EV as open on its street', () => {
@@ -484,26 +521,43 @@ describe('summarizeStreets', () => {
       (entry) => entry.street === pairing.spot.street,
     )!
 
-    expect(played).toMatchObject({ open: 1, mastered: 0, untested: played.total - 1 })
+    expect(played).toMatchObject({
+      open: 1,
+      mastered: 0,
+      learning: 0,
+      untested: played.total - 1,
+    })
   })
 
   it('reaches 100 percent once every pairing on a street is proven', () => {
     const street = streets[0]
     const onStreet = allPairings.filter((pairing) => pairing.spot.street === street)
-    const coverage = buildCoverage(reviewSession(onStreet.map(gradeOptimally)))
+    const coverage = buildCoverage(reviewSession(onStreet.flatMap(proveFully)))
     const played = summarizeStreets(coverage).find((entry) => entry.street === street)!
 
-    expect(played).toMatchObject({ mastered: played.total, untested: 0, percentMastered: 100 })
+    expect(played).toMatchObject({
+      mastered: played.total,
+      learning: 0,
+      untested: 0,
+      percentMastered: 100,
+    })
   })
 
   it('agrees with the whole-grid summary once every street is added up', () => {
-    const coverage = buildCoverage(reviewSession([gradeBadly(allPairings[0]), gradeOptimally(allPairings[1])]))
+    const coverage = buildCoverage(
+      reviewSession([
+        gradeBadly(allPairings[0]),
+        gradeOptimally(allPairings[1]),
+        ...proveFully(allPairings[2]),
+      ]),
+    )
     const progress = summarizeStreets(coverage)
     const stats = summarizeCoverage(coverage)
     const sum = (pick: (entry: (typeof progress)[number]) => number) =>
       progress.reduce((total, entry) => total + pick(entry), 0)
 
     expect(sum((entry) => entry.mastered)).toBe(stats.mastered)
+    expect(sum((entry) => entry.learning)).toBe(stats.learning)
     expect(sum((entry) => entry.open)).toBe(stats.open)
     expect(sum((entry) => entry.untested)).toBe(stats.untested)
   })
@@ -675,6 +729,97 @@ describe('buildRetryDrill', () => {
   })
 })
 
+describe('buildConfirmDrill', () => {
+  const dealt = (grades: ReturnType<typeof gradeOptimally>[], focus?: 'Preflop' | 'River') =>
+    buildConfirmDrill(buildCoverage(reviewSession(grades)), focus).map(pairingKey)
+
+  it('deals nothing from an unplayed grid', () => {
+    expect(buildConfirmDrill(buildCoverage([]))).toEqual([])
+  })
+
+  it('deals nothing from an empty grid rather than throwing', () => {
+    expect(buildConfirmDrill([])).toEqual([])
+  })
+
+  it('deals the pairings nailed exactly once', () => {
+    const [once, ...rest] = allPairings
+
+    expect(dealt([gradeOptimally(once), ...rest.flatMap(proveFully)])).toEqual([pairingKey(once)])
+  })
+
+  it('leaves out a pairing that has since been proven', () => {
+    expect(dealt(proveFully(allPairings[0]))).toEqual([])
+  })
+
+  it('leaves out an open leak, which is the retry drill\'s job', () => {
+    const rows = reviewSession([gradeBadly(allPairings[0])])
+
+    expect(buildConfirmDrill(buildCoverage(rows))).toEqual([])
+    expect(buildRetryDrill(rows).map(pairingKey)).toEqual([pairingKey(allPairings[0])])
+  })
+
+  it('deals a leak replayed right once, because one clean rep does not prove it', () => {
+    const pairing = allPairings[0]
+
+    expect(dealt([gradeBadly(pairing), gradeOptimally(pairing)])).toEqual([pairingKey(pairing)])
+  })
+
+  it('deals in authored grid order, so a confirm run reads like a hand', () => {
+    const picked = [allPairings[allPairings.length - 1], allPairings[0]]
+
+    expect(dealt(picked.map(gradeOptimally))).toEqual(
+      allPairings.filter((pairing) => picked.includes(pairing)).map(pairingKey),
+    )
+  })
+
+  it('never deals the same pairing twice', () => {
+    const keys = dealt(allPairings.map(gradeOptimally))
+
+    expect(keys).toHaveLength(allPairings.length)
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('narrows to one street when focused', () => {
+    const keys = dealt(allPairings.map(gradeOptimally), 'River')
+    const onStreet = allPairings.filter((pairing) => pairing.spot.street === 'River')
+
+    expect(keys).toEqual(onStreet.map(pairingKey))
+  })
+
+  it('only deals pairings the trainer can grade', () => {
+    for (const hand of buildConfirmDrill(
+      buildCoverage(reviewSession(allPairings.map(gradeOptimally))),
+    )) {
+      expect(spots).toContain(hand.spot)
+      expect(() => gradeAnswer(hand.spot, hand.opponentId, hand.spot.actions[0].id)).not.toThrow()
+    }
+  })
+
+  it('empties out once every pairing it dealt is answered right again', () => {
+    const first = allPairings.map(gradeOptimally)
+    const confirmed = buildConfirmDrill(buildCoverage(reviewSession(first)))
+
+    expect(confirmed).toHaveLength(allPairings.length)
+
+    const second = confirmed.map((hand) =>
+      gradeOptimally({ spot: hand.spot, opponentId: hand.opponentId }),
+    )
+
+    expect(buildConfirmDrill(buildCoverage(reviewSession([...first, ...second])))).toEqual([])
+  })
+
+  it('agrees with the coverage summary about how many are unconfirmed', () => {
+    const grades = [
+      gradeOptimally(allPairings[0]),
+      gradeBadly(allPairings[1]),
+      ...proveFully(allPairings[2]),
+    ]
+    const coverage = buildCoverage(reviewSession(grades))
+
+    expect(buildConfirmDrill(coverage)).toHaveLength(summarizeCoverage(coverage).learning)
+  })
+})
+
 describe('summarizeLeakProgress', () => {
   const key = (row: { spot: { id: string }; grade: { opponentId: string } }) =>
     `${row.spot.id}/${row.grade.opponentId}`
@@ -790,13 +935,44 @@ describe('buildCoverage', () => {
 
     expect(coverage.every((cell) => cell.status === 'untested')).toBe(true)
     expect(coverage.every((cell) => cell.attempts === 0 && cell.evLost === 0)).toBe(true)
+    expect(coverage.every((cell) => cell.streak === 0)).toBe(true)
+    expect(coverage.every((cell) => cell.repsToMastery === MASTERY_REPS)).toBe(true)
   })
 
-  it('marks a pairing played optimally as mastered', () => {
+  it('marks a pairing played optimally once as learning, not yet proven', () => {
     const rows = reviewSession([gradeAnswer(cbetSpot, 'fish', 'overbet')])
     const cell = find(buildCoverage(rows), 'btn-cbet-tptk/fish')
 
-    expect(cell).toMatchObject({ status: 'mastered', attempts: 1, evLost: 0 })
+    expect(cell).toMatchObject({
+      status: 'learning',
+      attempts: 1,
+      evLost: 0,
+      streak: 1,
+      repsToMastery: 1,
+    })
+  })
+
+  it('masters a pairing once the same line is found MASTERY_REPS times running', () => {
+    const rows = reviewSession(
+      Array.from({ length: MASTERY_REPS }, () => gradeAnswer(cbetSpot, 'fish', 'overbet')),
+    )
+    const cell = find(buildCoverage(rows), 'btn-cbet-tptk/fish')
+
+    expect(cell).toMatchObject({
+      status: 'mastered',
+      attempts: MASTERY_REPS,
+      streak: MASTERY_REPS,
+      repsToMastery: 0,
+    })
+  })
+
+  it('keeps counting clean reps past mastery rather than capping the streak', () => {
+    const rows = reviewSession(
+      Array.from({ length: MASTERY_REPS + 2 }, () => gradeAnswer(cbetSpot, 'fish', 'overbet')),
+    )
+    const cell = find(buildCoverage(rows), 'btn-cbet-tptk/fish')
+
+    expect(cell).toMatchObject({ status: 'mastered', streak: MASTERY_REPS + 2, repsToMastery: 0 })
   })
 
   it('marks a pairing that gave up EV as open, carrying what it cost', () => {
@@ -814,23 +990,51 @@ describe('buildCoverage', () => {
     expect(find(buildCoverage(rows), 'btn-cbet-tptk/reg').status).toBe('open')
   })
 
-  it('counts only the latest attempt, so replaying a leak masters it', () => {
+  it('closes a leak on the first clean replay, but does not yet prove it', () => {
     const rows = reviewSession([
       gradeAnswer(riverSpot, 'tag', 'call'),
       gradeAnswer(riverSpot, 'tag', 'fold'),
     ])
     const cell = find(buildCoverage(rows), 'bb-river-bluffcatch/tag')
 
-    expect(cell).toMatchObject({ status: 'mastered', attempts: 2 })
+    expect(cell).toMatchObject({ status: 'learning', attempts: 2, streak: 1, evLost: 0 })
+    expect(summarizeLeakProgress(rows).open).toEqual([])
   })
 
-  it('reopens a pairing that was mastered and is now missed', () => {
+  it('reopens a pairing that was proven and is now missed', () => {
     const rows = reviewSession([
+      gradeAnswer(riverSpot, 'tag', 'fold'),
       gradeAnswer(riverSpot, 'tag', 'fold'),
       gradeAnswer(riverSpot, 'tag', 'call'),
     ])
+    const cell = find(buildCoverage(rows), 'bb-river-bluffcatch/tag')
 
-    expect(find(buildCoverage(rows), 'bb-river-bluffcatch/tag').status).toBe('open')
+    expect(cell).toMatchObject({ status: 'open', streak: 0, repsToMastery: MASTERY_REPS })
+  })
+
+  it('makes a reopened pairing earn its reps again from scratch', () => {
+    const rows = reviewSession([
+      gradeAnswer(riverSpot, 'tag', 'fold'),
+      gradeAnswer(riverSpot, 'tag', 'fold'),
+      gradeAnswer(riverSpot, 'tag', 'call'),
+      gradeAnswer(riverSpot, 'tag', 'fold'),
+    ])
+
+    expect(find(buildCoverage(rows), 'bb-river-bluffcatch/tag').status).toBe('learning')
+  })
+
+  it("resets the streak on a 'close' answer, not just an outright mistake", () => {
+    const rows = reviewSession([
+      gradeAnswer(cbetSpot, 'reg', 'bet33'),
+      gradeAnswer(cbetSpot, 'reg', 'bet66'),
+    ])
+
+    expect(rows[0].grade.verdict).toBe('optimal')
+    expect(rows[1].grade.verdict).toBe('close')
+    expect(find(buildCoverage(rows), 'btn-cbet-tptk/reg')).toMatchObject({
+      status: 'open',
+      streak: 0,
+    })
   })
 
   it('tracks the same spot against different reads separately', () => {
@@ -841,7 +1045,7 @@ describe('buildCoverage', () => {
     const coverage = buildCoverage(rows)
 
     expect(find(coverage, 'bb-river-bluffcatch/tag').status).toBe('open')
-    expect(find(coverage, 'bb-river-bluffcatch/lag').status).toBe('mastered')
+    expect(find(coverage, 'bb-river-bluffcatch/lag').status).toBe('learning')
     expect(find(coverage, 'bb-river-bluffcatch/fish').status).toBe('untested')
   })
 
@@ -875,6 +1079,7 @@ describe('summarizeCoverage', () => {
       total: 0,
       played: 0,
       mastered: 0,
+      learning: 0,
       open: 0,
       untested: 0,
       percentMastered: 0,
@@ -888,6 +1093,7 @@ describe('summarizeCoverage', () => {
       total: allPairings.length,
       played: 0,
       mastered: 0,
+      learning: 0,
       open: 0,
       untested: allPairings.length,
       percentMastered: 0,
@@ -898,28 +1104,51 @@ describe('summarizeCoverage', () => {
     const rows = reviewSession([
       gradeAnswer(riverSpot, 'tag', 'call'),
       gradeAnswer(cbetSpot, 'fish', 'overbet'),
+      gradeAnswer(cbetSpot, 'fish', 'overbet'),
     ])
     const summary = summarizeCoverage(buildCoverage(rows))
 
-    expect(summary).toMatchObject({ played: 2, mastered: 1, open: 1 })
-    expect(summary.mastered + summary.open + summary.untested).toBe(summary.total)
+    expect(summary).toMatchObject({ played: 2, mastered: 1, learning: 0, open: 1 })
+    expect(summary.mastered + summary.learning + summary.open + summary.untested).toBe(
+      summary.total,
+    )
+  })
+
+  it('counts a pairing nailed once as learning rather than proven or open', () => {
+    const rows = reviewSession([gradeAnswer(cbetSpot, 'fish', 'overbet')])
+    const summary = summarizeCoverage(buildCoverage(rows))
+
+    expect(summary).toMatchObject({ played: 1, mastered: 0, learning: 1, open: 0 })
+    expect(summary.percentMastered).toBe(0)
   })
 
   it('reaches 100 percent only when every pairing is proven', () => {
-    const grades = allPairings.map(gradeOptimally)
+    const grades = allPairings.flatMap(proveFully)
     const summary = summarizeCoverage(buildCoverage(reviewSession(grades)))
 
     expect(summary).toMatchObject({
       played: allPairings.length,
       mastered: allPairings.length,
+      learning: 0,
       open: 0,
       untested: 0,
       percentMastered: 100,
     })
   })
 
+  it('stops short of 100 percent while a single pairing is still unconfirmed', () => {
+    const grades = [
+      gradeOptimally(allPairings[0]),
+      ...allPairings.slice(1).flatMap(proveFully),
+    ]
+    const summary = summarizeCoverage(buildCoverage(reviewSession(grades)))
+
+    expect(summary).toMatchObject({ played: allPairings.length, learning: 1, open: 0 })
+    expect(summary.percentMastered).toBeLessThan(100)
+  })
+
   it('does not count an open pairing toward the proven percentage', () => {
-    const grades = [gradeBadly(allPairings[0]), ...allPairings.slice(1).map(gradeOptimally)]
+    const grades = [gradeBadly(allPairings[0]), ...allPairings.slice(1).flatMap(proveFully)]
     const summary = summarizeCoverage(buildCoverage(reviewSession(grades)))
 
     expect(summary.open).toBe(1)

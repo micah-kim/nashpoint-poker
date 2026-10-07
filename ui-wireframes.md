@@ -50,7 +50,7 @@ Side‑by‑side:
 ---
 
 ## Demo Page (Interactive Spot Trainer)
-- Mode selector: "Pick the read" vs "Deal me a drill", plus "Drill my open leaks (n)" once this browser has unsolved pairings (switching starts a fresh session)  
+- Mode selector: "Pick the read" vs "Deal me a drill", plus "Drill my open leaks (n)" once this browser has unsolved pairings and "Confirm what I guessed (n)" once it has pairings answered right exactly once (switching starts a fresh session)  
 - Street focus chips under the mode selector: "Any street", Preflop, Flop, Turn, River, each with its proven/total count. Clicking one deals a drill from that street immediately  
 - Welcome-back line under the mode selector on a return visit: spots played, sessions, lifetime accuracy, open leaks, pairings proven  
 - Spot panel: street/position/pot tags, hole cards, board  
@@ -66,13 +66,14 @@ Side‑by‑side:
 - Hand-by-hand review: each spot, the opponent faced, your line vs the best line, its EV cost, and whether the miss was too passive or too aggressive  
 - Retry CTA: "Drill the ones I missed (n)" when any hand gave up EV, replaying just those spot/read pairings  
 - Retry drill: same layout, read shown read-only, mode note explains it is a replay of the missed hands  
+- Confirm run: same layout, read shown read-only, headed "the read you got right once" -- every pairing one clean rep short of proven, dealt preflop through river  
 - Restart controls: re-run / re-deal / run the retry hands back, plus a switch to the other mode  
 - Training history card (only once a session has been finished in this browser):
   - Lifetime spots played + sessions, lifetime optimal %, lifetime EV lost
   - Trend: this session's accuracy versus everything before it, in points
   - The read that has cost the most across every session
-  - Coverage grid: one row per spot, one column per read, each cell untested / still open / proven, with a proven-percentage bar, a legend with counts, and a star on the pairings where the read overrides the baseline
-  - Street-by-street panel: one bar per street with its proven/total count and any pairings still open
+  - Coverage grid: one row per spot, one column per read, each cell untested / still open / right once / proven twice, with a proven-percentage bar, a legend with counts, a note on the two-rep bar, a star on the pairings where the read overrides the baseline, and a "Confirm these (n)" CTA when any pairing is a rep short
+  - Street-by-street panel: one bar per street with its proven/total count, any pairings answered right only once, and any still open
   - "Which way you miss" panel: a row per direction (too passive / too aggressive) with its miss count, EV cost, and share of the damage, the heavier side highlighted; a one-line bias verdict; the same split per street; and a "Drill the ones I played too <direction>" CTA for the open pairings missed that way, replaced by a note when none are left open
   - Leaks closed, and the list of pairings still open with the line you played vs the best line and the direction it missed in
   - "Drill my open leaks (n)" CTA, and a "Reset history" control that forgets everything  

@@ -86,7 +86,7 @@ export interface CareerSummary {
 
 export const emptyHistory: TrainingHistory = { sessions: [] }
 
-const sessionKinds: SessionKind[] = ['explore', 'drill', 'retry']
+const sessionKinds: SessionKind[] = ['explore', 'drill', 'retry', 'confirm']
 const verdicts: Verdict[] = ['optimal', 'close', 'mistake']
 
 function isRecord(value: unknown): value is Record<string, unknown> {
