@@ -15,6 +15,7 @@ import {
   type TrainingHistory,
 } from '@/lib/progress'
 import {
+  buildConfirmDrill,
   buildCoverageDrill,
   buildRetryDrill,
   buildTendencyDrill,
@@ -73,6 +74,18 @@ const tendencyCopy: Record<
   },
 }
 
+/**
+ * Column count for the mode picker, keyed by how many modes are on offer.
+ *
+ * Four options are too narrow to sit in one row on a small tablet, so that
+ * case stays two-up until there is desktop width for it.
+ */
+const modeColumns: Record<number, string> = {
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-3',
+  4: 'sm:grid-cols-2 lg:grid-cols-4',
+}
+
 /** A dealt run of hands: a coverage drill, or a replay of the ones you missed. */
 interface DealtSession {
   kind: Exclude<SessionKind, 'explore'>
@@ -119,11 +132,24 @@ export default function DemoContent() {
     () => buildRetryDrill(careerSummary.openLeaks),
     [careerSummary.openLeaks],
   )
+  /** Pairings nailed exactly once, which a second rep either proves or exposes. */
+  const confirmHands = useMemo(
+    () => buildConfirmDrill(careerSummary.coverage),
+    [careerSummary.coverage],
+  )
 
   const kind: SessionKind = dealt?.kind ?? 'explore'
   const isDealt = dealt !== null
-  /** Only a live drill is on a street; explore and retry ignore the focus. */
+  /** Only a live drill is on a street; the other modes ignore the focus. */
   const activeFocus: DrillFocus | null = kind === 'drill' ? focus : null
+  /** Explore and drill are always offered; the other two have to be earned. */
+  const modeCount = 2 + (leakHands.length > 0 ? 1 : 0) + (confirmHands.length > 0 ? 1 : 0)
+  const activeModeNote =
+    kind === 'retry'
+      ? demoContent.retryActiveNote
+      : kind === 'confirm'
+        ? demoContent.confirmActiveNote
+        : demoContent.modeSwitchNote
   const hand = dealt ? dealt.hands[spotIndex] : { spot: spots[spotIndex], opponentId: pickedOpponentId }
   const { spot, opponentId } = hand
   const totalSpots = dealt ? dealt.hands.length : spots.length
@@ -137,6 +163,10 @@ export default function DemoContent() {
     explore: { heading: demoContent.opponentHeading, hint: demoContent.opponentHint },
     drill: { heading: demoContent.dealtOpponentHeading, hint: demoContent.dealtOpponentHint },
     retry: { heading: demoContent.retryOpponentHeading, hint: demoContent.retryOpponentHint },
+    confirm: {
+      heading: demoContent.confirmOpponentHeading,
+      hint: demoContent.confirmOpponentHint,
+    },
   }[kind]
 
   function handleSubmit() {
@@ -206,10 +236,28 @@ export default function DemoContent() {
     resetSession()
   }
 
+  /** Runs a pre-built list of hands, ignoring the street focus a drill uses. */
+  function startDealt(kind: DealtSession['kind'], hands: DealtHand[]) {
+    if (hands.length === 0) return
+
+    setDealt({ kind, hands })
+    resetSession()
+  }
+
   /** Deals the hands a finished session gave up EV on, so a leak gets replayed. */
   function startRetry(hands: DealtHand[]) {
-    setDealt({ kind: 'retry', hands })
-    resetSession()
+    startDealt('retry', hands)
+  }
+
+  /**
+   * Deals the pairings this browser has found the right line in exactly once.
+   *
+   * Distinct from a retry: nothing here is costing the visitor EV right now,
+   * so there is no leak to replay. What a second rep settles is whether the
+   * first one was knowledge or a guess at one of two to four lines.
+   */
+  function startConfirmDrill() {
+    startDealt('confirm', confirmHands)
   }
 
   /**
@@ -218,8 +266,6 @@ export default function DemoContent() {
    * hands, same read, second look -- only the source of the list differs.
    */
   function startLeakDrill() {
-    if (leakHands.length === 0) return
-
     startRetry(leakHands)
   }
 
@@ -259,11 +305,7 @@ export default function DemoContent() {
             <p className="text-xs uppercase tracking-wide text-brand-text-secondary mb-3">
               {demoContent.modeHeading}
             </p>
-            <div
-              className={`grid grid-cols-1 gap-3 ${
-                leakHands.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
-              }`}
-            >
+            <div className={`grid grid-cols-1 gap-3 ${modeColumns[modeCount]}`}>
               <ModeOption
                 icon="target"
                 label={demoContent.exploreModeLabel}
@@ -290,6 +332,16 @@ export default function DemoContent() {
                   onSelect={startLeakDrill}
                 />
               )}
+              {/* Only offered once a pairing is sitting on a single clean rep. */}
+              {confirmHands.length > 0 && (
+                <ModeOption
+                  icon="check"
+                  label={`${demoContent.confirmModeLabel} (${confirmHands.length})`}
+                  hint={demoContent.confirmModeHint}
+                  isActive={kind === 'confirm'}
+                  onSelect={startConfirmDrill}
+                />
+              )}
             </div>
             <StreetFocusPicker
               activeFocus={activeFocus}
@@ -298,7 +350,7 @@ export default function DemoContent() {
               onSelect={startDrill}
             />
             <p className="text-xs text-brand-text-secondary mt-3">
-              {kind === 'retry' ? demoContent.retryActiveNote : demoContent.modeSwitchNote}
+              {activeModeNote}
             </p>
             {activeFocus && activeFocus !== 'all' && (
               <p className="text-xs text-brand-accent mt-1">
@@ -332,6 +384,7 @@ export default function DemoContent() {
             career={careerSummary}
             onRestart={handleRestart}
             onRetry={startRetry}
+            onConfirm={startConfirmDrill}
             onSwitchMode={kind === 'explore' ? () => startDrill(focus) : startExplore}
             onResetHistory={resetHistory}
           />
@@ -600,6 +653,7 @@ interface SessionSummaryPanelProps {
   career: CareerSummary
   onRestart: () => void
   onRetry: (hands: DealtHand[]) => void
+  onConfirm: () => void
   onSwitchMode: () => void
   onResetHistory: () => void
 }
@@ -608,6 +662,7 @@ const restartCtas: Record<SessionKind, string> = {
   explore: demoContent.restartCta,
   drill: demoContent.newDrillCta,
   retry: demoContent.retryAgainCta,
+  confirm: demoContent.confirmAgainCta,
 }
 
 function SessionSummaryPanel({
@@ -616,6 +671,7 @@ function SessionSummaryPanel({
   career,
   onRestart,
   onRetry,
+  onConfirm,
   onSwitchMode,
   onResetHistory,
 }: SessionSummaryPanelProps) {
@@ -693,7 +749,12 @@ function SessionSummaryPanel({
       )}
 
       {career.sessions > 0 && (
-        <CareerPanel career={career} onRetry={onRetry} onResetHistory={onResetHistory} />
+        <CareerPanel
+          career={career}
+          onRetry={onRetry}
+          onConfirm={onConfirm}
+          onResetHistory={onResetHistory}
+        />
       )}
 
       <Card>
@@ -722,6 +783,7 @@ function SessionSummaryPanel({
 interface CareerPanelProps {
   career: CareerSummary
   onRetry: (hands: DealtHand[]) => void
+  onConfirm: () => void
   onResetHistory: () => void
 }
 
@@ -729,8 +791,9 @@ interface CareerPanelProps {
  * The long-term half of the recap: what this browser has played across every
  * visit, which read is still winning, and the leaks that remain open.
  */
-function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
+function CareerPanel({ career, onRetry, onConfirm, onResetHistory }: CareerPanelProps) {
   const leakHands = useMemo(() => buildRetryDrill(career.openLeaks), [career.openLeaks])
+  const confirmHands = useMemo(() => buildConfirmDrill(career.coverage), [career.coverage])
   /**
    * The lifetime tendency is measured over every answer ever given, but a
    * drill can only deal what is still open -- replaying a pairing correctly
@@ -811,7 +874,12 @@ function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
         <p className="text-xs text-brand-text-secondary">{demoContent.careerClosedNote}</p>
       </div>
 
-      <CoverageGrid coverage={career.coverage} stats={career.coverageStats} />
+      <CoverageGrid
+        coverage={career.coverage}
+        stats={career.coverageStats}
+        confirmHands={confirmHands}
+        onConfirm={onConfirm}
+      />
 
       <StreetProgressPanel streetProgress={career.streetProgress} />
 
@@ -853,12 +921,19 @@ function CareerPanel({ career, onRetry, onResetHistory }: CareerPanelProps) {
 interface CoverageGridProps {
   coverage: CoverageCell[]
   stats: CoverageSummary
+  /** Pairings one clean rep short of proven. Empty hides the confirm CTA. */
+  confirmHands: DealtHand[]
+  onConfirm: () => void
 }
 
 const coverageStyles: Record<CoverageStatus, { swatch: string; label: string }> = {
   mastered: {
     swatch: 'bg-green-600/40 border-green-500/70 text-green-200',
     label: demoContent.coverageProvenLabel,
+  },
+  learning: {
+    swatch: 'bg-brand-accent/25 border-brand-accent/60 text-brand-accent',
+    label: demoContent.coverageLearningLabel,
   },
   open: {
     swatch: 'bg-red-600/40 border-red-500/70 text-red-200',
@@ -870,8 +945,11 @@ const coverageStyles: Record<CoverageStatus, { swatch: string; label: string }> 
   },
 }
 
-/** Legend order: what you have proven, what you owe, what you have not seen. */
-const coverageLegend: CoverageStatus[] = ['mastered', 'open', 'untested']
+/**
+ * Legend order: what you have proven, what is one rep short, what you owe,
+ * what you have not seen.
+ */
+const coverageLegend: CoverageStatus[] = ['mastered', 'learning', 'open', 'untested']
 
 /** `buildCoverage` returns the grid spot-major, so this keeps the authored order. */
 function groupCoverageBySpot(coverage: CoverageCell[]): CoverageCell[][] {
@@ -897,10 +975,11 @@ function groupCoverageBySpot(coverage: CoverageCell[]): CoverageCell[][] {
  * not answered at all, which is the thing a session recap could never show. It
  * is also the order drill mode now deals in, so the gaps double as a plan.
  */
-function CoverageGrid({ coverage, stats }: CoverageGridProps) {
+function CoverageGrid({ coverage, stats, confirmHands, onConfirm }: CoverageGridProps) {
   const rows = useMemo(() => groupCoverageBySpot(coverage), [coverage])
   const counts: Record<CoverageStatus, number> = {
     mastered: stats.mastered,
+    learning: stats.learning,
     open: stats.open,
     untested: stats.untested,
   }
@@ -982,11 +1061,21 @@ function CoverageGrid({ coverage, stats }: CoverageGridProps) {
         ))}
       </div>
       <p className="text-xs text-brand-text-secondary mt-2">
-        {stats.untested === 0 && stats.open === 0
+        {stats.untested === 0 && stats.open === 0 && stats.learning === 0
           ? demoContent.coverageCompleteNote
           : demoContent.coverageRemainingNote}
       </p>
+      <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageMasteryNote}</p>
       <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageDeviationNote}</p>
+
+      {confirmHands.length > 0 && (
+        <>
+          <Button variant="outline" onClick={onConfirm} className="w-full mt-3">
+            {demoContent.confirmCta} ({confirmHands.length})
+          </Button>
+          <p className="text-xs text-brand-text-secondary mt-2">{demoContent.confirmHint}</p>
+        </>
+      )}
     </div>
   )
 }
@@ -998,6 +1087,7 @@ function CoverageCellBox({ cell }: { cell: CoverageCell }) {
     `${cell.spot.title} vs ${cell.opponent.shortLabel}`,
     styles.label,
     cell.status === 'open' ? formatBb(-cell.evLost) : null,
+    cell.status === 'learning' ? demoContent.coverageLearningRepLabel : null,
     cell.isDeviation ? demoContent.coverageDeviationLabel : null,
   ]
     .filter((part): part is string => part !== null)
@@ -1098,7 +1188,7 @@ function ReviewListItem({ row, index }: ReviewListItemProps) {
 }
 
 interface ModeOptionProps {
-  icon: 'target' | 'dice' | 'refresh'
+  icon: 'target' | 'dice' | 'refresh' | 'check'
   label: string
   hint: string
   isActive: boolean
@@ -1234,6 +1324,9 @@ function StreetProgressPanel({ streetProgress }: { streetProgress: StreetProgres
             </div>
             <span className="text-xs tabular-nums text-brand-text-secondary shrink-0 text-right">
               {progress.mastered}/{progress.total}
+              {progress.learning > 0 && (
+                <span className="text-brand-accent"> &middot; {progress.learning} once</span>
+              )}
               {progress.open > 0 && (
                 <span className="text-red-400"> &middot; {progress.open} open</span>
               )}

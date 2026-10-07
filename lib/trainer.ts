@@ -224,7 +224,7 @@ export interface DealtHand {
  * How a session picked its hands. Lives here rather than in the page because
  * the persisted history in `lib/progress.ts` records it alongside the grades.
  */
-export type SessionKind = 'explore' | 'drill' | 'retry'
+export type SessionKind = 'explore' | 'drill' | 'retry' | 'confirm'
 
 /** How a session went against one opponent profile. */
 export interface OpponentBreakdown {
@@ -379,8 +379,23 @@ export function summarizeLeakProgress(rows: ReviewRow[]): LeakProgress {
   return { open: open.sort((a, b) => b.grade.evLoss - a.grade.evLoss), closed }
 }
 
-/** Where a visitor stands on one spot/read pairing. */
-export type CoverageStatus = 'untested' | 'open' | 'mastered'
+/**
+ * Consecutive optimal attempts a pairing needs before it counts as proven.
+ *
+ * A spot offers two to four lines, so a single clean answer is inside guessing
+ * range. Requiring the visitor to find the same line twice in a row is what
+ * separates knowing a pairing from having been lucky in it once.
+ */
+export const MASTERY_REPS = 2
+
+/**
+ * Where a visitor stands on one spot/read pairing.
+ *
+ * 'learning' is the middle ground `MASTERY_REPS` creates: the latest attempt
+ * was optimal, so nothing is owed in EV, but the pairing has not been proven
+ * often enough to retire it from the drill queue.
+ */
+export type CoverageStatus = 'untested' | 'open' | 'learning' | 'mastered'
 
 /** One cell of the spot-by-read grid, whether or not it has been played. */
 export interface CoverageCell {
@@ -391,6 +406,10 @@ export interface CoverageCell {
   attempts: number
   /** EV given up on the most recent attempt, in big blinds. 0 when untested. */
   evLost: number
+  /** Consecutive optimal attempts ending at the most recent one. */
+  streak: number
+  /** Clean reps still owed before this pairing is proven. 0 once mastered. */
+  repsToMastery: number
   /** True when the read moves the answer off the GTO baseline. */
   isDeviation: boolean
 }
@@ -400,9 +419,11 @@ export interface CoverageSummary {
   total: number
   played: number
   mastered: number
+  /** Pairings clean on the latest attempt but short of `MASTERY_REPS`. */
+  learning: number
   open: number
   untested: number
-  /** Percentage of the whole grid whose latest attempt was optimal, 0-100. */
+  /** Percentage of the whole grid proven, 0-100. */
   percentMastered: number
 }
 
@@ -413,25 +434,37 @@ export interface CoverageSummary {
  * it can never say what a visitor has not seen yet. This walks every pairing
  * the authored spots offer, in authored order, so the gaps are first-class:
  * an untested pairing is a different thing to one that was played and nailed.
+ *
+ * Status comes from the run of clean attempts ending at the latest one, not
+ * from the latest attempt alone. A pairing whose last answer cost EV is open
+ * however well it went before; a pairing answered right once is 'learning'
+ * until it is answered right `MASTERY_REPS` times in a row, because one clean
+ * answer out of two to four lines is inside guessing range. Missing a proven
+ * pairing resets the run, so mastery has to be re-earned rather than dented.
  */
 export function buildCoverage(rows: ReviewRow[]): CoverageCell[] {
-  const attempts = new Map<string, { count: number; latest: ReviewRow }>()
+  const attempts = new Map<string, { count: number; latest: ReviewRow; streak: number }>()
 
   for (const row of rows) {
     const key = `${row.spot.id}/${row.grade.opponentId}`
     const existing = attempts.get(key)
+    const isClean = row.grade.evLoss <= 0
 
-    attempts.set(key, { count: (existing?.count ?? 0) + 1, latest: row })
+    attempts.set(key, {
+      count: (existing?.count ?? 0) + 1,
+      latest: row,
+      streak: isClean ? (existing?.streak ?? 0) + 1 : 0,
+    })
   }
 
   return spots.flatMap((spot) =>
     opponentProfiles.map((opponent) => {
       const played = attempts.get(`${spot.id}/${opponent.id}`)
-      const evLost = played ? played.latest.grade.evLoss : 0
+      const streak = played?.streak ?? 0
 
       let status: CoverageStatus = 'untested'
       if (played) {
-        status = evLost > 0 ? 'open' : 'mastered'
+        status = streak === 0 ? 'open' : streak >= MASTERY_REPS ? 'mastered' : 'learning'
       }
 
       return {
@@ -439,7 +472,9 @@ export function buildCoverage(rows: ReviewRow[]): CoverageCell[] {
         opponent,
         status,
         attempts: played?.count ?? 0,
-        evLost,
+        evLost: played ? played.latest.grade.evLoss : 0,
+        streak,
+        repsToMastery: Math.max(0, MASTERY_REPS - streak),
         isDeviation: getRecommendation(spot, opponent.id).isDeviation,
       }
     }),
@@ -456,6 +491,7 @@ export function summarizeCoverage(coverage: CoverageCell[]): CoverageSummary {
     total: coverage.length,
     played: coverage.filter((cell) => cell.status !== 'untested').length,
     mastered,
+    learning: count('learning'),
     open: count('open'),
     untested: count('untested'),
     percentMastered: coverage.length === 0 ? 0 : Math.round((mastered / coverage.length) * 100),
@@ -479,9 +515,11 @@ export interface StreetProgress {
   /** Pairings this street offers: its spots times the opponent profiles. */
   total: number
   mastered: number
+  /** Pairings on this street clean once but short of `MASTERY_REPS`. */
+  learning: number
   open: number
   untested: number
-  /** Percentage of this street's pairings whose latest attempt was optimal, 0-100. */
+  /** Percentage of this street's pairings proven, 0-100. */
   percentMastered: number
 }
 
@@ -503,6 +541,7 @@ export function summarizeStreets(coverage: CoverageCell[]): StreetProgress[] {
         street,
         total: stats.total,
         mastered: stats.mastered,
+        learning: stats.learning,
         open: stats.open,
         untested: stats.untested,
         percentMastered: stats.percentMastered,
@@ -511,11 +550,15 @@ export function summarizeStreets(coverage: CoverageCell[]): StreetProgress[] {
     .filter((progress) => progress.total > 0)
 }
 
-/** Deal order for a coverage drill: unseen first, then unsolved, then proven. */
+/**
+ * Deal order for a coverage drill: unseen first, then unsolved, then the ones
+ * sitting on a single clean rep, then the ones already proven.
+ */
 const coveragePriority: Record<CoverageStatus, number> = {
   untested: 0,
   open: 1,
-  mastered: 2,
+  learning: 2,
+  mastered: 3,
 }
 
 /**
@@ -525,7 +568,8 @@ const coveragePriority: Record<CoverageStatus, number> = {
  * Dealing uniformly from the grid means a returning visitor keeps being handed
  * pairings they have already proven while pairings they have never seen stay
  * unseen. This sorts the grid by what the history does not yet know --
- * untested, then still open, then mastered -- and deals the front of that list.
+ * untested, then still open, then one clean rep in, then proven -- and deals
+ * the front of that list.
  * The shuffle happens first and the sort is stable, so the order inside a tier
  * is random but still reproducible from the seed.
  *
@@ -549,6 +593,30 @@ export function buildCoverageDrill(
   return shuffle(pool, mulberry32(seed))
     .sort((a, b) => coveragePriority[a.status] - coveragePriority[b.status])
     .slice(0, DRILL_LENGTH)
+    .map((cell) => ({ spot: cell.spot, opponentId: cell.opponent.id }))
+}
+
+/**
+ * Deals back the pairings sitting on a single clean rep.
+ *
+ * The third drill the coverage grid can hand out, and the one `MASTERY_REPS`
+ * makes possible. `buildCoverageDrill` deals the gaps and `buildRetryDrill`
+ * deals the leaks; neither can deal the pairings that look solved but are
+ * still one answer away from being guesswork. Those are exactly the pairings
+ * where a second rep is worth the most, because it either proves the line or
+ * exposes the guess.
+ *
+ * Deals in authored grid order, so a confirm run reads preflop through river,
+ * and takes no seed: there is nothing to randomise when the whole shortlist
+ * gets dealt. A `focus` narrows it to one street, the same way a drill does.
+ */
+export function buildConfirmDrill(
+  coverage: CoverageCell[],
+  focus: DrillFocus = 'all',
+): DealtHand[] {
+  return coverage
+    .filter((cell) => cell.status === 'learning')
+    .filter((cell) => focus === 'all' || cell.spot.street === focus)
     .map((cell) => ({ spot: cell.spot, opponentId: cell.opponent.id }))
 }
 
