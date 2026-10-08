@@ -4,6 +4,7 @@ import {
   buildConfirmDrill,
   buildCoverage,
   buildCoverageDrill,
+  buildRefreshDrill,
   buildRetryDrill,
   buildTendencyDrill,
   CLOSE_ENOUGH_BB,
@@ -14,6 +15,9 @@ import {
   getRecommendation,
   getSpot,
   gradeAnswer,
+  MASTERY_FRESH_CAP_DAYS,
+  MASTERY_FRESH_DAYS,
+  masteryFreshDays,
   MASTERY_REPS,
   missDirection,
   reviewSession,
@@ -49,6 +53,16 @@ function gradeOptimally(pairing: (typeof allPairings)[number]) {
  */
 function proveFully(pairing: (typeof allPairings)[number]) {
   return Array.from({ length: MASTERY_REPS }, () => gradeOptimally(pairing))
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** A fixed "now" so a dated test never depends on the wall clock. */
+const NOW = 1_700_000_000_000
+
+/** Reviews grades as if they had been answered `daysAgo` days before `NOW`. */
+function rowsAnsweredDaysAgo(grades: ReturnType<typeof gradeOptimally>[], daysAgo: number) {
+  return reviewSession(grades, NOW - daysAgo * DAY_MS)
 }
 
 /** Grades a pairing with its worst line, so it comes back as an open leak. */
@@ -729,6 +743,331 @@ describe('buildRetryDrill', () => {
   })
 })
 
+describe('masteryFreshDays', () => {
+  it('gives an unproven streak no window at all', () => {
+    for (let streak = 0; streak < MASTERY_REPS; streak += 1) {
+      expect(masteryFreshDays(streak)).toBe(0)
+    }
+  })
+
+  it('gives a freshly proven pairing the base window', () => {
+    expect(masteryFreshDays(MASTERY_REPS)).toBe(MASTERY_FRESH_DAYS)
+  })
+
+  it('doubles the window for every clean rep past the proof', () => {
+    expect(masteryFreshDays(MASTERY_REPS + 1)).toBe(MASTERY_FRESH_DAYS * 2)
+    expect(masteryFreshDays(MASTERY_REPS + 2)).toBe(MASTERY_FRESH_DAYS * 4)
+  })
+
+  it('stops doubling at the cap, however long the streak runs', () => {
+    expect(masteryFreshDays(MASTERY_REPS + 50)).toBe(MASTERY_FRESH_CAP_DAYS)
+  })
+
+  it('never returns a window longer than the cap', () => {
+    for (let streak = 0; streak <= 20; streak += 1) {
+      expect(masteryFreshDays(streak)).toBeLessThanOrEqual(MASTERY_FRESH_CAP_DAYS)
+    }
+  })
+})
+
+describe('buildCoverage ageing', () => {
+  const pairing = allPairings[0]
+  /** The proven cell for `pairing`, aged `daysAgo` days against `NOW`. */
+  const agedCell = (daysAgo: number, grades = proveFully(pairing)) =>
+    buildCoverage(rowsAnsweredDaysAgo(grades, daysAgo), NOW).find(
+      (cell) => cell.spot.id === pairing.spot.id && cell.opponent.id === pairing.opponentId,
+    )!
+
+  it('leaves a freshly proven pairing proven', () => {
+    expect(agedCell(0).status).toBe('mastered')
+  })
+
+  it('keeps a pairing proven right up to the last day of its window', () => {
+    expect(agedCell(MASTERY_FRESH_DAYS - 1).status).toBe('mastered')
+  })
+
+  it('turns a pairing stale the day its window runs out', () => {
+    expect(agedCell(MASTERY_FRESH_DAYS).status).toBe('stale')
+  })
+
+  it('reports how overdue a stale pairing is', () => {
+    const cell = agedCell(MASTERY_FRESH_DAYS + 5)
+
+    expect(cell.daysSinceLastPlayed).toBe(MASTERY_FRESH_DAYS + 5)
+    expect(cell.reviewDueInDays).toBe(-5)
+  })
+
+  it('reports how long a fresh proof has left', () => {
+    expect(agedCell(4).reviewDueInDays).toBe(MASTERY_FRESH_DAYS - 4)
+  })
+
+  it('stamps the latest attempt, not the first', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(pairing), 90),
+      ...rowsAnsweredDaysAgo(proveFully(pairing), 1),
+    ]
+    const cell = buildCoverage(rows, NOW).find(
+      (c) => c.spot.id === pairing.spot.id && c.opponent.id === pairing.opponentId,
+    )!
+
+    expect(cell.lastPlayedAt).toBe(NOW - DAY_MS)
+    expect(cell.daysSinceLastPlayed).toBe(1)
+    expect(cell.status).toBe('mastered')
+  })
+
+  it('holds a long streak fresh for longer than a bare proof', () => {
+    const longStreak = [...proveFully(pairing), gradeOptimally(pairing)]
+
+    expect(agedCell(MASTERY_FRESH_DAYS + 1).status).toBe('stale')
+    expect(agedCell(MASTERY_FRESH_DAYS + 1, longStreak).status).toBe('mastered')
+  })
+
+  it('ages nothing without a clock, so a live session never goes stale', () => {
+    const rows = rowsAnsweredDaysAgo(proveFully(pairing), 10_000)
+    const cell = buildCoverage(rows).find(
+      (c) => c.spot.id === pairing.spot.id && c.opponent.id === pairing.opponentId,
+    )!
+
+    expect(cell.status).toBe('mastered')
+    expect(cell.daysSinceLastPlayed).toBeNull()
+    expect(cell.reviewDueInDays).toBeNull()
+  })
+
+  it('ages nothing for undated rows, so an old history keeps its mastery', () => {
+    const cell = buildCoverage(reviewSession(proveFully(pairing)), NOW).find(
+      (c) => c.spot.id === pairing.spot.id && c.opponent.id === pairing.opponentId,
+    )!
+
+    expect(cell.lastPlayedAt).toBeNull()
+    expect(cell.status).toBe('mastered')
+    expect(cell.reviewDueInDays).toBeNull()
+  })
+
+  it('leaves a pairing proven right once as learning rather than ageing it', () => {
+    const cell = agedCell(10_000, [gradeOptimally(pairing)])
+
+    expect(cell.status).toBe('learning')
+    expect(cell.reviewDueInDays).toBeNull()
+  })
+
+  it('leaves an open leak open rather than ageing it into a review', () => {
+    const cell = agedCell(10_000, [gradeBadly(pairing)])
+
+    expect(cell.status).toBe('open')
+    expect(cell.reviewDueInDays).toBeNull()
+  })
+
+  it('never reports negative days for a session stamped ahead of the clock', () => {
+    const cell = agedCell(-3)
+
+    expect(cell.daysSinceLastPlayed).toBe(0)
+    expect(cell.reviewDueInDays).toBe(MASTERY_FRESH_DAYS)
+    expect(cell.status).toBe('mastered')
+  })
+
+  it('dates an untested pairing as never played', () => {
+    const cell = buildCoverage([], NOW)[0]
+
+    expect(cell.status).toBe('untested')
+    expect(cell.lastPlayedAt).toBeNull()
+    expect(cell.daysSinceLastPlayed).toBeNull()
+  })
+
+  it('counts a stale pairing as played, because it was', () => {
+    const rows = rowsAnsweredDaysAgo(proveFully(pairing), MASTERY_FRESH_DAYS + 1)
+    const stats = summarizeCoverage(buildCoverage(rows, NOW))
+
+    expect(stats.stale).toBe(1)
+    expect(stats.played).toBe(1)
+    expect(stats.mastered).toBe(0)
+  })
+
+  it('drops a stale pairing out of the proven percentage', () => {
+    const grades = allPairings.flatMap(proveFully)
+    const fresh = summarizeCoverage(buildCoverage(rowsAnsweredDaysAgo(grades, 0), NOW))
+    const cold = summarizeCoverage(
+      buildCoverage(rowsAnsweredDaysAgo(grades, MASTERY_FRESH_DAYS), NOW),
+    )
+
+    expect(fresh.percentMastered).toBe(100)
+    expect(cold.percentMastered).toBe(0)
+    expect(cold.stale).toBe(allPairings.length)
+  })
+
+  it('splits what is due by street', () => {
+    const rows = rowsAnsweredDaysAgo(allPairings.flatMap(proveFully), MASTERY_FRESH_DAYS)
+
+    for (const progress of summarizeStreets(buildCoverage(rows, NOW))) {
+      expect(progress.stale).toBe(progress.total)
+      expect(progress.mastered).toBe(0)
+    }
+  })
+})
+
+describe('buildRefreshDrill', () => {
+  const pairing = allPairings[0]
+
+  it('deals nothing from an unplayed grid', () => {
+    expect(buildRefreshDrill(buildCoverage([], NOW))).toEqual([])
+  })
+
+  it('deals nothing from an empty grid rather than throwing', () => {
+    expect(buildRefreshDrill([])).toEqual([])
+  })
+
+  it('deals nothing while every proof is still fresh', () => {
+    const rows = rowsAnsweredDaysAgo(allPairings.flatMap(proveFully), 0)
+
+    expect(buildRefreshDrill(buildCoverage(rows, NOW))).toEqual([])
+  })
+
+  it('deals a pairing once its proof has expired', () => {
+    const rows = rowsAnsweredDaysAgo(proveFully(pairing), MASTERY_FRESH_DAYS)
+
+    expect(buildRefreshDrill(buildCoverage(rows, NOW)).map(pairingKey)).toEqual([
+      pairingKey(pairing),
+    ])
+  })
+
+  it('deals the most faded pairing first', () => {
+    const [recent, older, oldest] = allPairings
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(recent), MASTERY_FRESH_DAYS + 1),
+      ...rowsAnsweredDaysAgo(proveFully(older), MASTERY_FRESH_DAYS + 10),
+      ...rowsAnsweredDaysAgo(proveFully(oldest), MASTERY_FRESH_DAYS + 40),
+    ]
+
+    expect(buildRefreshDrill(buildCoverage(rows, NOW)).map(pairingKey)).toEqual([
+      pairingKey(oldest),
+      pairingKey(older),
+      pairingKey(recent),
+    ])
+  })
+
+  it('falls back to authored order for pairings equally overdue', () => {
+    const rows = rowsAnsweredDaysAgo(allPairings.flatMap(proveFully), MASTERY_FRESH_DAYS)
+
+    expect(buildRefreshDrill(buildCoverage(rows, NOW)).map(pairingKey)).toEqual(
+      allPairings.map(pairingKey),
+    )
+  })
+
+  it('leaves out an open leak, which is the retry drill\'s job', () => {
+    const rows = rowsAnsweredDaysAgo([gradeBadly(pairing)], 10_000)
+
+    expect(buildRefreshDrill(buildCoverage(rows, NOW))).toEqual([])
+    expect(buildRetryDrill(rows).map(pairingKey)).toEqual([pairingKey(pairing)])
+  })
+
+  it('leaves out a pairing proven only once, which is the confirm run\'s job', () => {
+    const rows = rowsAnsweredDaysAgo([gradeOptimally(pairing)], 10_000)
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(buildRefreshDrill(coverage)).toEqual([])
+    expect(buildConfirmDrill(coverage).map(pairingKey)).toEqual([pairingKey(pairing)])
+  })
+
+  it('narrows to one street when focused', () => {
+    const rows = rowsAnsweredDaysAgo(allPairings.flatMap(proveFully), MASTERY_FRESH_DAYS)
+    const onStreet = allPairings.filter((candidate) => candidate.spot.street === 'River')
+
+    expect(buildRefreshDrill(buildCoverage(rows, NOW), 'River').map(pairingKey)).toEqual(
+      onStreet.map(pairingKey),
+    )
+  })
+
+  it('never deals the same pairing twice', () => {
+    const rows = rowsAnsweredDaysAgo(allPairings.flatMap(proveFully), MASTERY_FRESH_DAYS)
+    const keys = buildRefreshDrill(buildCoverage(rows, NOW)).map(pairingKey)
+
+    expect(keys).toHaveLength(allPairings.length)
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('only deals pairings the trainer can grade', () => {
+    const rows = rowsAnsweredDaysAgo(allPairings.flatMap(proveFully), MASTERY_FRESH_DAYS)
+
+    for (const hand of buildRefreshDrill(buildCoverage(rows, NOW))) {
+      expect(spots).toContain(hand.spot)
+      expect(() => gradeAnswer(hand.spot, hand.opponentId, hand.spot.actions[0].id)).not.toThrow()
+    }
+  })
+
+  it('agrees with the coverage summary about how many are due', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(allPairings[0]), MASTERY_FRESH_DAYS + 3),
+      ...rowsAnsweredDaysAgo(proveFully(allPairings[1]), 1),
+      ...rowsAnsweredDaysAgo([gradeBadly(allPairings[2])], 60),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(buildRefreshDrill(coverage)).toHaveLength(summarizeCoverage(coverage).stale)
+  })
+
+  it('empties out once what it dealt is proven again', () => {
+    const first = rowsAnsweredDaysAgo(proveFully(pairing), MASTERY_FRESH_DAYS + 1)
+    const due = buildRefreshDrill(buildCoverage(first, NOW))
+
+    expect(due).toHaveLength(1)
+
+    const again = rowsAnsweredDaysAgo(
+      due.map((hand) => gradeOptimally({ spot: hand.spot, opponentId: hand.opponentId })),
+      0,
+    )
+
+    expect(buildRefreshDrill(buildCoverage([...first, ...again], NOW))).toEqual([])
+  })
+})
+
+describe('buildCoverageDrill ageing', () => {
+  it('deals what is due ahead of a pairing proven right once', () => {
+    const [stale, learning] = allPairings
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(stale), MASTERY_FRESH_DAYS + 1),
+      ...rowsAnsweredDaysAgo([gradeOptimally(learning)], 0),
+      // Everything else proven today, so only these two are ahead of the pack.
+      ...rowsAnsweredDaysAgo(allPairings.slice(2).flatMap(proveFully), 0),
+    ]
+    const dealt = buildCoverageDrill(buildCoverage(rows, NOW), 1).map(pairingKey)
+
+    expect(dealt).toContain(pairingKey(stale))
+    expect(dealt).toContain(pairingKey(learning))
+    expect(dealt.indexOf(pairingKey(stale))).toBeLessThan(dealt.indexOf(pairingKey(learning)))
+  })
+
+  it('deals an open leak ahead of what is merely due', () => {
+    const [stale, open] = allPairings
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(stale), MASTERY_FRESH_DAYS + 1),
+      ...rowsAnsweredDaysAgo([gradeBadly(open)], 0),
+      ...rowsAnsweredDaysAgo(allPairings.slice(2).flatMap(proveFully), 0),
+    ]
+    const dealt = buildCoverageDrill(buildCoverage(rows, NOW), 1).map(pairingKey)
+
+    expect(dealt).toContain(pairingKey(open))
+    expect(dealt).toContain(pairingKey(stale))
+    expect(dealt.indexOf(pairingKey(open))).toBeLessThan(dealt.indexOf(pairingKey(stale)))
+  })
+
+  it('deals what is due ahead of what is still proven', () => {
+    const grades = allPairings.flatMap(proveFully)
+    const rows = [
+      ...rowsAnsweredDaysAgo(grades.slice(0, 2), MASTERY_FRESH_DAYS + 1),
+      ...rowsAnsweredDaysAgo(grades.slice(2), 0),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+    const stale = new Set(
+      coverage.filter((cell) => cell.status === 'stale').map((cell) => pairingKey({ spot: cell.spot, opponentId: cell.opponent.id })),
+    )
+    const dealt = buildCoverageDrill(coverage, 7).map(pairingKey)
+
+    expect(stale.size).toBeGreaterThan(0)
+    for (const key of stale) {
+      expect(dealt).toContain(key)
+    }
+  })
+})
+
 describe('buildConfirmDrill', () => {
   const dealt = (grades: ReturnType<typeof gradeOptimally>[], focus?: 'Preflop' | 'River') =>
     buildConfirmDrill(buildCoverage(reviewSession(grades)), focus).map(pairingKey)
@@ -1082,6 +1421,7 @@ describe('summarizeCoverage', () => {
       learning: 0,
       open: 0,
       untested: 0,
+      stale: 0,
       percentMastered: 0,
     })
   })

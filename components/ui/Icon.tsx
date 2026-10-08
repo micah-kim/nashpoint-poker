@@ -14,6 +14,7 @@ import {
   PartyPopper,
   Check,
   Circle,
+  Clock,
   RotateCcw,
   type LucideIcon,
 } from 'lucide-react'
@@ -35,6 +36,7 @@ export type IconName =
   | 'check'
   | 'circle'
   | 'refresh'
+  | 'clock'
 
 const iconMap: Record<IconName, LucideIcon> = {
   'arrow-down': ArrowDown,
@@ -53,6 +55,7 @@ const iconMap: Record<IconName, LucideIcon> = {
   check: Check,
   circle: Circle,
   refresh: RotateCcw,
+  clock: Clock,
 }
 
 interface IconProps {

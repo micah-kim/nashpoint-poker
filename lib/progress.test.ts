@@ -14,7 +14,14 @@ import {
   type PersistedSession,
   type TrainingHistory,
 } from './progress'
-import { getRecommendation, getSpot, gradeAnswer, type Grade, type SessionKind } from './trainer'
+import {
+  getRecommendation,
+  getSpot,
+  gradeAnswer,
+  MASTERY_FRESH_DAYS,
+  type Grade,
+  type SessionKind,
+} from './trainer'
 
 const cbetSpot = getSpot('btn-cbet-tptk')!
 const riverSpot = getSpot('bb-river-bluffcatch')!
@@ -30,6 +37,16 @@ function session(grades: Grade[], kind: SessionKind = 'drill', completedAt = 1_7
 
 function historyOf(...sessions: PersistedSession[]): TrainingHistory {
   return { sessions }
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** A fixed "now" so a dated test never depends on the wall clock. */
+const NOW = 1_700_000_000_000
+
+/** `completedAt` for a session finished `daysAgo` days before `NOW`. */
+function daysAgo(days: number): number {
+  return NOW - days * DAY_MS
 }
 
 describe('appendSession', () => {
@@ -118,6 +135,16 @@ describe('parseHistory', () => {
 
     expect(parseHistory(base.replace('"kind":"drill"', '"kind":"freeplay"'))).toEqual(emptyHistory)
     expect(parseHistory(base.replace(/"completedAt":\d+/, '"completedAt":"today"'))).toEqual(emptyHistory)
+  })
+
+  it('keeps every kind of session the trainer can deal', () => {
+    for (const kind of ['explore', 'drill', 'retry', 'confirm', 'refresh'] as SessionKind[]) {
+      const stored = serializeHistory(
+        historyOf(session([gradeAnswer(riverSpot, 'tag', 'call')], kind)),
+      )
+
+      expect(parseHistory(stored).sessions[0]?.kind).toBe(kind)
+    }
   })
 
   it('caps a stored history that is longer than the limit', () => {
@@ -383,6 +410,92 @@ describe('summarizeCareer', () => {
     expect(career.tendency.passive.evLost + career.tendency.aggressive.evLost).toBeCloseTo(
       career.evLost,
     )
+  })
+})
+
+describe('summarizeCareer ageing', () => {
+  /** Proves one pairing `MASTERY_REPS` times in a session finished `days` ago. */
+  function provenSession(days: number) {
+    return session([bestAnswer(cbetSpot, 'fish'), bestAnswer(cbetSpot, 'fish')], 'drill', daysAgo(days))
+  }
+
+  it('keeps a recently proven pairing proven', () => {
+    const career = summarizeCareer(historyOf(provenSession(1)), NOW)
+
+    expect(career.coverageStats.mastered).toBe(1)
+    expect(career.coverageStats.stale).toBe(0)
+  })
+
+  it('turns a pairing proven long ago into one due for review', () => {
+    const career = summarizeCareer(historyOf(provenSession(MASTERY_FRESH_DAYS + 1)), NOW)
+
+    expect(career.coverageStats.mastered).toBe(0)
+    expect(career.coverageStats.stale).toBe(1)
+  })
+
+  it('ages nothing without a clock, so server rendering stays stable', () => {
+    const career = summarizeCareer(historyOf(provenSession(10_000)))
+
+    expect(career.coverageStats.mastered).toBe(1)
+    expect(career.coverageStats.stale).toBe(0)
+  })
+
+  it('dates each pairing from the session it was played in, not the newest one', () => {
+    const career = summarizeCareer(
+      historyOf(
+        provenSession(MASTERY_FRESH_DAYS + 20),
+        session([bestAnswer(riverSpot, 'lag'), bestAnswer(riverSpot, 'lag')], 'drill', daysAgo(0)),
+      ),
+      NOW,
+    )
+    const cold = career.coverage.find(
+      (cell) => cell.spot.id === cbetSpot.id && cell.opponent.id === 'fish',
+    )!
+    const warm = career.coverage.find(
+      (cell) => cell.spot.id === riverSpot.id && cell.opponent.id === 'lag',
+    )!
+
+    expect(cold.status).toBe('stale')
+    expect(cold.daysSinceLastPlayed).toBe(MASTERY_FRESH_DAYS + 20)
+    expect(warm.status).toBe('mastered')
+    expect(warm.daysSinceLastPlayed).toBe(0)
+  })
+
+  it('re-proves a stale pairing when it is played again', () => {
+    const history = historyOf(
+      provenSession(MASTERY_FRESH_DAYS + 5),
+      session([bestAnswer(cbetSpot, 'fish')], 'refresh', daysAgo(0)),
+    )
+    const cell = summarizeCareer(history, NOW).coverage.find(
+      (candidate) => candidate.spot.id === cbetSpot.id && candidate.opponent.id === 'fish',
+    )!
+
+    // Three clean reps in a row, so the window has doubled rather than reset.
+    expect(cell.status).toBe('mastered')
+    expect(cell.streak).toBe(3)
+    expect(cell.reviewDueInDays).toBe(MASTERY_FRESH_DAYS * 2)
+  })
+
+  it('leaves the leak and accuracy totals alone, which do not age', () => {
+    const history = historyOf(provenSession(MASTERY_FRESH_DAYS + 1))
+    const aged = summarizeCareer(history, NOW)
+    const unaged = summarizeCareer(history)
+
+    expect(aged.accuracy).toBe(unaged.accuracy)
+    expect(aged.answered).toBe(unaged.answered)
+    expect(aged.openLeaks).toEqual(unaged.openLeaks)
+    expect(aged.closedLeaks).toBe(unaged.closedLeaks)
+    expect(aged.evLost).toBe(unaged.evLost)
+  })
+
+  it('stamps every review row with the session it came from', () => {
+    const career = summarizeCareer(
+      historyOf(session([gradeAnswer(riverSpot, 'tag', 'call')], 'drill', daysAgo(3))),
+      NOW,
+    )
+
+    expect(career.openLeaks).toHaveLength(1)
+    expect(career.openLeaks[0].answeredAt).toBe(daysAgo(3))
   })
 })
 

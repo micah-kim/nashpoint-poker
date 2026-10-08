@@ -66,9 +66,13 @@ export interface CareerSummary {
   openLeaks: ReviewRow[]
   /** Pairings missed once and since played perfectly. */
   closedLeaks: number
-  /** Every spot/read pairing the trainer offers, played or not. */
+  /**
+   * Every spot/read pairing the trainer offers, played or not, aged against
+   * the `now` this summary was built with: a pairing proven long enough ago
+   * comes back as due for review rather than staying proven forever.
+   */
   coverage: CoverageCell[]
-  /** How much of that grid has been seen and proven. */
+  /** How much of that grid has been seen, proven, and is still fresh. */
   coverageStats: CoverageSummary
   /** The same grid split by street, preflop through river. */
   streetProgress: StreetProgress[]
@@ -86,7 +90,7 @@ export interface CareerSummary {
 
 export const emptyHistory: TrainingHistory = { sessions: [] }
 
-const sessionKinds: SessionKind[] = ['explore', 'drill', 'retry', 'confirm']
+const sessionKinds: SessionKind[] = ['explore', 'drill', 'retry', 'confirm', 'refresh']
 const verdicts: Verdict[] = ['optimal', 'close', 'mistake']
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -188,14 +192,21 @@ export function appendSession(
  *
  * Reuses the session-level aggregations so the career card and the recap card
  * cannot disagree: the only difference is how many grades go in.
+ *
+ * Rows are reviewed per session rather than over one flat list of grades, so
+ * each one carries the `completedAt` of the session it came from. That is the
+ * only reason a career can age: pass `now` and pairings proven long enough ago
+ * fall back to due-for-review. Leave `now` out and nothing expires, which is
+ * what server rendering needs -- a clock read during render would not match
+ * the client on hydration.
  */
-export function summarizeCareer(history: TrainingHistory): CareerSummary {
+export function summarizeCareer(history: TrainingHistory, now?: number): CareerSummary {
   const { sessions } = history
   const grades = sessions.flatMap((session) => session.grades)
-  const rows = reviewSession(grades)
+  const rows = sessions.flatMap((session) => reviewSession(session.grades, session.completedAt))
   const summary = summarizeSession(grades)
   const leaks = summarizeLeakProgress(rows)
-  const coverage = buildCoverage(rows)
+  const coverage = buildCoverage(rows, now)
   const latest = sessions[sessions.length - 1]
   const prior = sessions.slice(0, -1).flatMap((session) => session.grades)
 

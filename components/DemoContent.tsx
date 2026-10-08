@@ -17,6 +17,7 @@ import {
 import {
   buildConfirmDrill,
   buildCoverageDrill,
+  buildRefreshDrill,
   buildRetryDrill,
   buildTendencyDrill,
   drillFocuses,
@@ -84,6 +85,7 @@ const modeColumns: Record<number, string> = {
   2: 'sm:grid-cols-2',
   3: 'sm:grid-cols-3',
   4: 'sm:grid-cols-2 lg:grid-cols-4',
+  5: 'sm:grid-cols-2 lg:grid-cols-3',
 }
 
 /** A dealt run of hands: a coverage drill, or a replay of the ones you missed. */
@@ -120,14 +122,25 @@ export default function DemoContent() {
   const [isFinished, setIsFinished] = useState(false)
   /** Everything this browser has played before, loaded after mount. */
   const [career, setCareer] = useState<TrainingHistory>(emptyHistory)
+  /**
+   * The clock the coverage grid ages against, read once after mount.
+   *
+   * Held in state rather than called inside the `useMemo` below because that
+   * memo runs during render: a `Date.now()` there would differ between the
+   * server and the client and break hydration, the same reason the history
+   * itself is loaded in an effect. Null until mount, which is exactly the
+   * "nothing has aged yet" case `summarizeCareer` already handles.
+   */
+  const [now, setNow] = useState<number | null>(null)
 
-  // Storage is client-only, so the first render has to match the server's
-  // empty history and fill in afterwards.
+  // Storage and the clock are both client-only, so the first render has to
+  // match the server's empty, un-aged history and fill in afterwards.
   useEffect(() => {
     setCareer(loadHistory())
+    setNow(Date.now())
   }, [])
 
-  const careerSummary = useMemo(() => summarizeCareer(career), [career])
+  const careerSummary = useMemo(() => summarizeCareer(career, now ?? undefined), [career, now])
   const leakHands = useMemo(
     () => buildRetryDrill(careerSummary.openLeaks),
     [careerSummary.openLeaks],
@@ -137,19 +150,30 @@ export default function DemoContent() {
     () => buildConfirmDrill(careerSummary.coverage),
     [careerSummary.coverage],
   )
+  /** Pairings proven long enough ago that the proof has expired. */
+  const refreshHands = useMemo(
+    () => buildRefreshDrill(careerSummary.coverage),
+    [careerSummary.coverage],
+  )
 
   const kind: SessionKind = dealt?.kind ?? 'explore'
   const isDealt = dealt !== null
   /** Only a live drill is on a street; the other modes ignore the focus. */
   const activeFocus: DrillFocus | null = kind === 'drill' ? focus : null
-  /** Explore and drill are always offered; the other two have to be earned. */
-  const modeCount = 2 + (leakHands.length > 0 ? 1 : 0) + (confirmHands.length > 0 ? 1 : 0)
+  /** Explore and drill are always offered; the other three have to be earned. */
+  const modeCount =
+    2 +
+    (leakHands.length > 0 ? 1 : 0) +
+    (confirmHands.length > 0 ? 1 : 0) +
+    (refreshHands.length > 0 ? 1 : 0)
   const activeModeNote =
     kind === 'retry'
       ? demoContent.retryActiveNote
       : kind === 'confirm'
         ? demoContent.confirmActiveNote
-        : demoContent.modeSwitchNote
+        : kind === 'refresh'
+          ? demoContent.refreshActiveNote
+          : demoContent.modeSwitchNote
   const hand = dealt ? dealt.hands[spotIndex] : { spot: spots[spotIndex], opponentId: pickedOpponentId }
   const { spot, opponentId } = hand
   const totalSpots = dealt ? dealt.hands.length : spots.length
@@ -167,6 +191,10 @@ export default function DemoContent() {
       heading: demoContent.confirmOpponentHeading,
       hint: demoContent.confirmOpponentHint,
     },
+    refresh: {
+      heading: demoContent.refreshOpponentHeading,
+      hint: demoContent.refreshOpponentHint,
+    },
   }[kind]
 
   function handleSubmit() {
@@ -183,10 +211,16 @@ export default function DemoContent() {
    * recorded exactly once even though `Date.now()` is involved.
    */
   function recordSession(grades: Grade[]) {
-    const next = appendSession(career, { kind, completedAt: Date.now(), grades })
+    const completedAt = Date.now()
+    const next = appendSession(career, { kind, completedAt, grades })
 
     setCareer(next)
     saveHistory(next)
+    // Re-read the clock the grid ages against, so a pairing just proven is
+    // dated from the session that proved it rather than from page load. Without
+    // this a long visit keeps ageing against a stale `now`, and a pairing
+    // proven after mount reports a day more freshness than it earned.
+    setNow(completedAt)
   }
 
   function handleNext() {
@@ -258,6 +292,18 @@ export default function DemoContent() {
    */
   function startConfirmDrill() {
     startDealt('confirm', confirmHands)
+  }
+
+  /**
+   * Deals the pairings whose proof has expired, most faded first.
+   *
+   * Distinct from a confirm run as well as a retry: these were proven, twice
+   * in a row, and nothing about them is open. All that happened is that time
+   * passed -- which is the one thing a history of right answers cannot tell a
+   * visitor on its own.
+   */
+  function startRefreshDrill() {
+    startDealt('refresh', refreshHands)
   }
 
   /**
@@ -342,6 +388,16 @@ export default function DemoContent() {
                   onSelect={startConfirmDrill}
                 />
               )}
+              {/* Only offered once a proven pairing has gone long enough unplayed. */}
+              {refreshHands.length > 0 && (
+                <ModeOption
+                  icon="clock"
+                  label={`${demoContent.refreshModeLabel} (${refreshHands.length})`}
+                  hint={demoContent.refreshModeHint}
+                  isActive={kind === 'refresh'}
+                  onSelect={startRefreshDrill}
+                />
+              )}
             </div>
             <StreetFocusPicker
               activeFocus={activeFocus}
@@ -372,6 +428,16 @@ export default function DemoContent() {
                   {careerSummary.coverageStats.mastered}/{careerSummary.coverageStats.total}
                 </span>{' '}
                 of the grid proven
+                {careerSummary.coverageStats.stale > 0 && (
+                  <>
+                    {' '}
+                    &middot;{' '}
+                    <span className="tabular-nums text-brand-accent">
+                      {careerSummary.coverageStats.stale}
+                    </span>{' '}
+                    due for review
+                  </>
+                )}
               </p>
             )}
           </Card>
@@ -385,6 +451,7 @@ export default function DemoContent() {
             onRestart={handleRestart}
             onRetry={startRetry}
             onConfirm={startConfirmDrill}
+            onRefresh={startRefreshDrill}
             onSwitchMode={kind === 'explore' ? () => startDrill(focus) : startExplore}
             onResetHistory={resetHistory}
           />
@@ -654,6 +721,7 @@ interface SessionSummaryPanelProps {
   onRestart: () => void
   onRetry: (hands: DealtHand[]) => void
   onConfirm: () => void
+  onRefresh: () => void
   onSwitchMode: () => void
   onResetHistory: () => void
 }
@@ -663,6 +731,7 @@ const restartCtas: Record<SessionKind, string> = {
   drill: demoContent.newDrillCta,
   retry: demoContent.retryAgainCta,
   confirm: demoContent.confirmAgainCta,
+  refresh: demoContent.refreshAgainCta,
 }
 
 function SessionSummaryPanel({
@@ -672,6 +741,7 @@ function SessionSummaryPanel({
   onRestart,
   onRetry,
   onConfirm,
+  onRefresh,
   onSwitchMode,
   onResetHistory,
 }: SessionSummaryPanelProps) {
@@ -753,6 +823,7 @@ function SessionSummaryPanel({
           career={career}
           onRetry={onRetry}
           onConfirm={onConfirm}
+          onRefresh={onRefresh}
           onResetHistory={onResetHistory}
         />
       )}
@@ -784,6 +855,7 @@ interface CareerPanelProps {
   career: CareerSummary
   onRetry: (hands: DealtHand[]) => void
   onConfirm: () => void
+  onRefresh: () => void
   onResetHistory: () => void
 }
 
@@ -791,9 +863,16 @@ interface CareerPanelProps {
  * The long-term half of the recap: what this browser has played across every
  * visit, which read is still winning, and the leaks that remain open.
  */
-function CareerPanel({ career, onRetry, onConfirm, onResetHistory }: CareerPanelProps) {
+function CareerPanel({
+  career,
+  onRetry,
+  onConfirm,
+  onRefresh,
+  onResetHistory,
+}: CareerPanelProps) {
   const leakHands = useMemo(() => buildRetryDrill(career.openLeaks), [career.openLeaks])
   const confirmHands = useMemo(() => buildConfirmDrill(career.coverage), [career.coverage])
+  const refreshHands = useMemo(() => buildRefreshDrill(career.coverage), [career.coverage])
   /**
    * The lifetime tendency is measured over every answer ever given, but a
    * drill can only deal what is still open -- replaying a pairing correctly
@@ -865,6 +944,20 @@ function CareerPanel({ career, onRetry, onConfirm, onResetHistory }: CareerPanel
           </div>
         )}
 
+        {career.coverageStats.stale > 0 && (
+          <>
+            <div className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
+              <span className="text-sm text-brand-text-secondary">
+                {demoContent.careerDueLabel}
+              </span>
+              <span className="text-sm font-semibold text-brand-accent tabular-nums shrink-0">
+                {career.coverageStats.stale}
+              </span>
+            </div>
+            <p className="text-xs text-brand-text-secondary">{demoContent.careerDueNote}</p>
+          </>
+        )}
+
         <div className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
           <span className="text-sm text-brand-text-secondary">{demoContent.careerClosedLabel}</span>
           <span className="text-sm font-semibold text-green-400 tabular-nums shrink-0">
@@ -878,7 +971,9 @@ function CareerPanel({ career, onRetry, onConfirm, onResetHistory }: CareerPanel
         coverage={career.coverage}
         stats={career.coverageStats}
         confirmHands={confirmHands}
+        refreshHands={refreshHands}
         onConfirm={onConfirm}
+        onRefresh={onRefresh}
       />
 
       <StreetProgressPanel streetProgress={career.streetProgress} />
@@ -923,7 +1018,10 @@ interface CoverageGridProps {
   stats: CoverageSummary
   /** Pairings one clean rep short of proven. Empty hides the confirm CTA. */
   confirmHands: DealtHand[]
+  /** Pairings whose proof has expired. Empty hides the review CTA. */
+  refreshHands: DealtHand[]
   onConfirm: () => void
+  onRefresh: () => void
 }
 
 const coverageStyles: Record<CoverageStatus, { swatch: string; label: string }> = {
@@ -943,13 +1041,17 @@ const coverageStyles: Record<CoverageStatus, { swatch: string; label: string }> 
     swatch: 'bg-brand-surface border-brand-text-secondary/30 text-brand-text-secondary',
     label: demoContent.coverageUntestedLabel,
   },
+  stale: {
+    swatch: 'bg-brand-accent/10 border-brand-accent/40 border-dashed text-brand-accent',
+    label: demoContent.coverageStaleLabel,
+  },
 }
 
 /**
- * Legend order: what you have proven, what is one rep short, what you owe,
- * what you have not seen.
+ * Legend order: what you have proven, what has gone cold, what is one rep
+ * short, what you owe, what you have not seen.
  */
-const coverageLegend: CoverageStatus[] = ['mastered', 'learning', 'open', 'untested']
+const coverageLegend: CoverageStatus[] = ['mastered', 'stale', 'learning', 'open', 'untested']
 
 /** `buildCoverage` returns the grid spot-major, so this keeps the authored order. */
 function groupCoverageBySpot(coverage: CoverageCell[]): CoverageCell[][] {
@@ -975,13 +1077,21 @@ function groupCoverageBySpot(coverage: CoverageCell[]): CoverageCell[][] {
  * not answered at all, which is the thing a session recap could never show. It
  * is also the order drill mode now deals in, so the gaps double as a plan.
  */
-function CoverageGrid({ coverage, stats, confirmHands, onConfirm }: CoverageGridProps) {
+function CoverageGrid({
+  coverage,
+  stats,
+  confirmHands,
+  refreshHands,
+  onConfirm,
+  onRefresh,
+}: CoverageGridProps) {
   const rows = useMemo(() => groupCoverageBySpot(coverage), [coverage])
   const counts: Record<CoverageStatus, number> = {
     mastered: stats.mastered,
     learning: stats.learning,
     open: stats.open,
     untested: stats.untested,
+    stale: stats.stale,
   }
 
   return (
@@ -1061,11 +1171,12 @@ function CoverageGrid({ coverage, stats, confirmHands, onConfirm }: CoverageGrid
         ))}
       </div>
       <p className="text-xs text-brand-text-secondary mt-2">
-        {stats.untested === 0 && stats.open === 0 && stats.learning === 0
+        {stats.untested === 0 && stats.open === 0 && stats.learning === 0 && stats.stale === 0
           ? demoContent.coverageCompleteNote
           : demoContent.coverageRemainingNote}
       </p>
       <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageMasteryNote}</p>
+      <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageStaleNote}</p>
       <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageDeviationNote}</p>
 
       {confirmHands.length > 0 && (
@@ -1074,6 +1185,15 @@ function CoverageGrid({ coverage, stats, confirmHands, onConfirm }: CoverageGrid
             {demoContent.confirmCta} ({confirmHands.length})
           </Button>
           <p className="text-xs text-brand-text-secondary mt-2">{demoContent.confirmHint}</p>
+        </>
+      )}
+
+      {refreshHands.length > 0 && (
+        <>
+          <Button variant="outline" onClick={onRefresh} className="w-full mt-3">
+            {demoContent.refreshCta} ({refreshHands.length})
+          </Button>
+          <p className="text-xs text-brand-text-secondary mt-2">{demoContent.refreshHint}</p>
         </>
       )}
     </div>
@@ -1088,6 +1208,13 @@ function CoverageCellBox({ cell }: { cell: CoverageCell }) {
     styles.label,
     cell.status === 'open' ? formatBb(-cell.evLost) : null,
     cell.status === 'learning' ? demoContent.coverageLearningRepLabel : null,
+    cell.status === 'stale' && cell.daysSinceLastPlayed !== null
+      ? `${cell.daysSinceLastPlayed} ${demoContent.coverageStaleDaysLabel}`
+      : null,
+    // A fresh proof says how long it has left; a review already due says so.
+    cell.status === 'mastered' && cell.reviewDueInDays !== null
+      ? `${cell.reviewDueInDays} ${demoContent.coverageDueDaysLabel}`
+      : null,
     cell.isDeviation ? demoContent.coverageDeviationLabel : null,
   ]
     .filter((part): part is string => part !== null)
@@ -1188,7 +1315,7 @@ function ReviewListItem({ row, index }: ReviewListItemProps) {
 }
 
 interface ModeOptionProps {
-  icon: 'target' | 'dice' | 'refresh' | 'check'
+  icon: 'target' | 'dice' | 'refresh' | 'check' | 'clock'
   label: string
   hint: string
   isActive: boolean
@@ -1324,6 +1451,9 @@ function StreetProgressPanel({ streetProgress }: { streetProgress: StreetProgres
             </div>
             <span className="text-xs tabular-nums text-brand-text-secondary shrink-0 text-right">
               {progress.mastered}/{progress.total}
+              {progress.stale > 0 && (
+                <span className="text-brand-accent"> &middot; {progress.stale} due</span>
+              )}
               {progress.learning > 0 && (
                 <span className="text-brand-accent"> &middot; {progress.learning} once</span>
               )}
