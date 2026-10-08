@@ -50,9 +50,9 @@ Side‑by‑side:
 ---
 
 ## Demo Page (Interactive Spot Trainer)
-- Mode selector: "Pick the read" vs "Deal me a drill", plus "Drill my open leaks (n)" once this browser has unsolved pairings and "Confirm what I guessed (n)" once it has pairings answered right exactly once (switching starts a fresh session)  
+- Mode selector: "Pick the read" vs "Deal me a drill", plus "Drill my open leaks (n)" once this browser has unsolved pairings, "Confirm what I guessed (n)" once it has pairings answered right exactly once, and "Review what has gone cold (n)" once a proven pairing has gone stale (switching starts a fresh session)  
 - Street focus chips under the mode selector: "Any street", Preflop, Flop, Turn, River, each with its proven/total count. Clicking one deals a drill from that street immediately  
-- Welcome-back line under the mode selector on a return visit: spots played, sessions, lifetime accuracy, open leaks, pairings proven  
+- Welcome-back line under the mode selector on a return visit: spots played, sessions, lifetime accuracy, open leaks, pairings proven, and how many are due for review  
 - Spot panel: street/position/pot tags, hole cards, board  
 - Pick-the-read mode: opponent profile selector (five reads, locked once an answer is submitted)  
 - Drill mode: the dealt read, shown read-only -- up to five spot/read hands dealt from the gaps in this browser's coverage, narrowed to the focused street  
@@ -67,6 +67,8 @@ Side‑by‑side:
 - Retry CTA: "Drill the ones I missed (n)" when any hand gave up EV, replaying just those spot/read pairings  
 - Retry drill: same layout, read shown read-only, mode note explains it is a replay of the missed hands  
 - Confirm run: same layout, read shown read-only, headed "the read you got right once" -- every pairing one clean rep short of proven, dealt preflop through river  
+- Review run: same layout, read shown read-only, headed "the read you once had" -- every pairing whose proof has expired, dealt most faded first  
+- Coverage grid: a fifth cell state, a dashed amber "due for review", sitting between proven and right-once in the legend. Cell labels carry the dates: days since last played when due, days until review when still proven  
 - Restart controls: re-run / re-deal / run the retry hands back, plus a switch to the other mode  
 - Training history card (only once a session has been finished in this browser):
   - Lifetime spots played + sessions, lifetime optimal %, lifetime EV lost

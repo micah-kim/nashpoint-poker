@@ -81,11 +81,12 @@ A playable slice of the product, running entirely in the browser.
 
 Training modes:
 - **Pick the read** - walk the authored spots against an opponent you choose, preflop through river
-- **Deal me a drill** - up to five spot/read pairings you do not get to choose, dealt from the gaps in your coverage: never-seen pairings first, then the ones still open, then the ones answered right only once
+- **Deal me a drill** - up to five spot/read pairings you do not get to choose, dealt from the gaps in your coverage: never-seen pairings first, then the ones still open, then the ones due for review, then the ones answered right only once
 - **Street focus** - aim that drill at Preflop, Flop, Turn, or River and every dealt hand comes from that street
 - **Retry drill** - offered from the recap, replays only the hands that gave up EV
 - **Drill my open leaks** - offered once this browser has unsolved pairings, replays the leaks still open across every past visit
 - **Confirm what I guessed** - offered once a pairing has been answered right exactly once, re-deals those pairings so a second clean rep can prove them
+- **Review what has gone cold** - offered once a proven pairing has gone unplayed long enough for the proof to expire, re-deals those pairings most faded first. Each clean rep doubles how long a line stays proven, so lines you keep re-proving come back less often
 - **Drill the direction you miss in** - offered from the training history once a bias shows, replays only the open pairings you got wrong that way
 
 Sections:
@@ -97,7 +98,7 @@ Sections:
 - GTO baseline frequency chart plus the exploitative adjustment and its EV gain  
 - Session summary with hand-by-hand review, a per-read breakdown, and a biggest-leak callout  
 - Retry CTA on the recap that re-deals the missed spot/read pairings  
-- Training history card with lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open  
+- Training history card with lifetime accuracy, the read that costs the most, pairings due for review, leaks closed, and the leaks still open  
 - Coverage grid of every spot against every read, marking what is untested, still open, answered right once, and proven  
 - Per-street progress bars showing which street of your game has never been tested  
 - Miss-direction panel naming whether wrong answers were too passive or too aggressive, what each direction has cost, and how that splits per street  

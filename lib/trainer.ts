@@ -67,6 +67,15 @@ export interface ReviewRow {
   bestLabel: string
   /** True when the read moved the answer off the GTO baseline. */
   wasDeviation: boolean
+  /**
+   * Epoch milliseconds the answer was recorded, when the caller knows it.
+   *
+   * A live session does not: it is being graded now, and nothing downstream of
+   * a recap cares when. The persisted history does, because it stamps each
+   * finished session, and that timestamp is what lets `buildCoverage` tell a
+   * line proven this morning from one proven two months ago.
+   */
+  answeredAt?: number
 }
 
 export interface SessionSummary {
@@ -176,8 +185,12 @@ export function summarizeSession(grades: Grade[]): SessionSummary {
  *
  * `Grade` only stores ids so it stays cheap to keep in state; this is where
  * those ids turn into the spot, opponent, and action labels the recap renders.
+ *
+ * `answeredAt` stamps every row with when the grades were recorded. A live
+ * session leaves it out; `summarizeCareer` passes each stored session's
+ * `completedAt`, which is what makes a career's coverage age.
  */
-export function reviewSession(grades: Grade[]): ReviewRow[] {
+export function reviewSession(grades: Grade[], answeredAt?: number): ReviewRow[] {
   return grades.map((grade) => {
     const spot = getSpot(grade.spotId)
 
@@ -195,6 +208,7 @@ export function reviewSession(grades: Grade[]): ReviewRow[] {
       chosenLabel: label(grade.chosenActionId),
       bestLabel: label(grade.bestActionId),
       wasDeviation: getRecommendation(spot, grade.opponentId).isDeviation,
+      answeredAt,
     }
   })
 }
@@ -224,7 +238,7 @@ export interface DealtHand {
  * How a session picked its hands. Lives here rather than in the page because
  * the persisted history in `lib/progress.ts` records it alongside the grades.
  */
-export type SessionKind = 'explore' | 'drill' | 'retry' | 'confirm'
+export type SessionKind = 'explore' | 'drill' | 'retry' | 'confirm' | 'refresh'
 
 /** How a session went against one opponent profile. */
 export interface OpponentBreakdown {
@@ -388,14 +402,48 @@ export function summarizeLeakProgress(rows: ReviewRow[]): LeakProgress {
  */
 export const MASTERY_REPS = 2
 
+/** Milliseconds in a day, for turning two timestamps into whole days. */
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * How long a freshly proven pairing stays proven before it is due again.
+ *
+ * Proving a line twice says you knew it that day; it does not say you will
+ * know it next month. Without an expiry the grid can only ever fill up, so a
+ * visitor who proved everything in one sitting is told they have mastered the
+ * trainer forever -- which is the one claim a training product should not make.
+ */
+export const MASTERY_FRESH_DAYS = 14
+
+/** Longest a pairing can stay proven, however many reps back it up. */
+export const MASTERY_FRESH_CAP_DAYS = 56
+
+/**
+ * How long a pairing stays proven, given the run of clean reps behind it.
+ *
+ * This is the 'spaced' half of spaced repetition: each clean rep past
+ * `MASTERY_REPS` doubles the window, so a line you keep re-proving comes back
+ * less and less often, up to `MASTERY_FRESH_CAP_DAYS`. A streak short of
+ * `MASTERY_REPS` has no window because it was never proven in the first place.
+ */
+export function masteryFreshDays(streak: number): number {
+  if (streak < MASTERY_REPS) return 0
+
+  return Math.min(MASTERY_FRESH_CAP_DAYS, MASTERY_FRESH_DAYS * 2 ** (streak - MASTERY_REPS))
+}
+
 /**
  * Where a visitor stands on one spot/read pairing.
  *
  * 'learning' is the middle ground `MASTERY_REPS` creates: the latest attempt
  * was optimal, so nothing is owed in EV, but the pairing has not been proven
  * often enough to retire it from the drill queue.
+ *
+ * 'stale' is the other middle ground, the one time creates: the pairing was
+ * proven, and long enough ago that the proof has expired. Nothing is owed in
+ * EV there either -- it is a pairing due for review, not a leak.
  */
-export type CoverageStatus = 'untested' | 'open' | 'learning' | 'mastered'
+export type CoverageStatus = 'untested' | 'open' | 'learning' | 'mastered' | 'stale'
 
 /** One cell of the spot-by-read grid, whether or not it has been played. */
 export interface CoverageCell {
@@ -412,6 +460,15 @@ export interface CoverageCell {
   repsToMastery: number
   /** True when the read moves the answer off the GTO baseline. */
   isDeviation: boolean
+  /** Epoch ms of the most recent attempt, or null when untested or untimed. */
+  lastPlayedAt: number | null
+  /** Whole days since that attempt, or null when it cannot be dated. */
+  daysSinceLastPlayed: number | null
+  /**
+   * Whole days until this pairing is due for review. Null unless it has been
+   * proven; 0 or negative once the proof has expired and the cell is 'stale'.
+   */
+  reviewDueInDays: number | null
 }
 
 export interface CoverageSummary {
@@ -423,7 +480,9 @@ export interface CoverageSummary {
   learning: number
   open: number
   untested: number
-  /** Percentage of the whole grid proven, 0-100. */
+  /** Pairings proven once but long enough ago to be due for review. */
+  stale: number
+  /** Percentage of the whole grid proven and still fresh, 0-100. */
   percentMastered: number
 }
 
@@ -441,8 +500,15 @@ export interface CoverageSummary {
  * until it is answered right `MASTERY_REPS` times in a row, because one clean
  * answer out of two to four lines is inside guessing range. Missing a proven
  * pairing resets the run, so mastery has to be re-earned rather than dented.
+ *
+ * Pass `now` and a proof also expires: a pairing proven longer ago than its
+ * streak earned it (see `masteryFreshDays`) comes back as 'stale'. Without a
+ * `now` nothing ages, which is what a live session wants -- it is being graded
+ * this second, so every row in it is as fresh as rows get. Rows with no
+ * `answeredAt` never go stale either, so a history written before sessions
+ * were dated keeps its mastery rather than expiring all at once.
  */
-export function buildCoverage(rows: ReviewRow[]): CoverageCell[] {
+export function buildCoverage(rows: ReviewRow[], now?: number): CoverageCell[] {
   const attempts = new Map<string, { count: number; latest: ReviewRow; streak: number }>()
 
   for (const row of rows) {
@@ -467,6 +533,24 @@ export function buildCoverage(rows: ReviewRow[]): CoverageCell[] {
         status = streak === 0 ? 'open' : streak >= MASTERY_REPS ? 'mastered' : 'learning'
       }
 
+      const lastPlayedAt = played?.latest.answeredAt ?? null
+      const canAge = now !== undefined && lastPlayedAt !== null
+      // Floor, so a pairing is only "1 day old" once a full day has passed.
+      // Clamped at zero: a stored session stamped ahead of `now` -- a clock that
+      // moved backwards, or a session finished after `now` was read -- would
+      // otherwise report negative days and buy itself extra freshness.
+      const daysSinceLastPlayed = canAge
+        ? Math.max(0, Math.floor((now - lastPlayedAt) / DAY_MS))
+        : null
+      const reviewDueInDays =
+        status === 'mastered' && daysSinceLastPlayed !== null
+          ? masteryFreshDays(streak) - daysSinceLastPlayed
+          : null
+
+      if (reviewDueInDays !== null && reviewDueInDays <= 0) {
+        status = 'stale'
+      }
+
       return {
         spot,
         opponent,
@@ -476,6 +560,9 @@ export function buildCoverage(rows: ReviewRow[]): CoverageCell[] {
         streak,
         repsToMastery: Math.max(0, MASTERY_REPS - streak),
         isDeviation: getRecommendation(spot, opponent.id).isDeviation,
+        lastPlayedAt,
+        daysSinceLastPlayed,
+        reviewDueInDays,
       }
     }),
   )
@@ -494,6 +581,7 @@ export function summarizeCoverage(coverage: CoverageCell[]): CoverageSummary {
     learning: count('learning'),
     open: count('open'),
     untested: count('untested'),
+    stale: count('stale'),
     percentMastered: coverage.length === 0 ? 0 : Math.round((mastered / coverage.length) * 100),
   }
 }
@@ -519,7 +607,9 @@ export interface StreetProgress {
   learning: number
   open: number
   untested: number
-  /** Percentage of this street's pairings proven, 0-100. */
+  /** Pairings on this street proven, but long enough ago to be due again. */
+  stale: number
+  /** Percentage of this street's pairings proven and still fresh, 0-100. */
   percentMastered: number
 }
 
@@ -544,6 +634,7 @@ export function summarizeStreets(coverage: CoverageCell[]): StreetProgress[] {
         learning: stats.learning,
         open: stats.open,
         untested: stats.untested,
+        stale: stats.stale,
         percentMastered: stats.percentMastered,
       }
     })
@@ -552,13 +643,20 @@ export function summarizeStreets(coverage: CoverageCell[]): StreetProgress[] {
 
 /**
  * Deal order for a coverage drill: unseen first, then unsolved, then the ones
- * sitting on a single clean rep, then the ones already proven.
+ * whose proof has expired, then the ones sitting on a single clean rep, then
+ * the ones still proven.
+ *
+ * 'stale' sits ahead of 'learning' because it is the one that is actually due.
+ * A pairing answered right yesterday is still fresh in memory, so re-dealing
+ * it today tests recall at its easiest; a pairing proven two months ago is
+ * exactly where recall has had time to fail.
  */
 const coveragePriority: Record<CoverageStatus, number> = {
   untested: 0,
   open: 1,
-  learning: 2,
-  mastered: 3,
+  stale: 2,
+  learning: 3,
+  mastered: 4,
 }
 
 /**
@@ -618,6 +716,38 @@ export function buildConfirmDrill(
     .filter((cell) => cell.status === 'learning')
     .filter((cell) => focus === 'all' || cell.spot.street === focus)
     .map((cell) => ({ spot: cell.spot, opponentId: cell.opponent.id }))
+}
+
+/**
+ * Deals back the pairings whose proof has expired, most faded first.
+ *
+ * The fourth drill the coverage grid can hand out, and the only one that
+ * exists because time passed rather than because the visitor got something
+ * wrong. `buildCoverageDrill` deals the gaps, `buildRetryDrill` the leaks and
+ * `buildConfirmDrill` the guesses; none of them can deal a line the visitor
+ * genuinely knew in January, because on the evidence of the history it is
+ * still known.
+ *
+ * Ordered by how overdue a pairing is rather than by authored order, so the
+ * line proven longest ago is the first one handed back. Ties fall back to the
+ * authored grid order, so a run dealt from one session's worth of stale
+ * pairings still reads preflop through river. Takes no seed -- there is
+ * nothing to randomise when the queue has its own priority -- and a `focus`
+ * narrows it to one street, the same way a drill does.
+ */
+export function buildRefreshDrill(
+  coverage: CoverageCell[],
+  focus: DrillFocus = 'all',
+): DealtHand[] {
+  return coverage
+    .filter((cell) => cell.status === 'stale')
+    .filter((cell) => focus === 'all' || cell.spot.street === focus)
+    .map((cell, index) => ({ cell, index }))
+    .sort(
+      (a, b) =>
+        (a.cell.reviewDueInDays ?? 0) - (b.cell.reviewDueInDays ?? 0) || a.index - b.index,
+    )
+    .map(({ cell }) => ({ spot: cell.spot, opponentId: cell.opponent.id }))
 }
 
 /**
