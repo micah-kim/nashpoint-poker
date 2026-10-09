@@ -79,6 +79,8 @@ Visitors must immediately understand:
 ### 4. Spot Trainer Demo (`/demo`)
 A playable slice of the product, running entirely in the browser.
 
+**Next up** - a single recommendation above the mode picker naming the one queue worth clearing: pairings never played, then the ones still open, then proofs that have expired, then the ones answered right exactly once. Its button starts the drill that empties that queue. With nothing due it says so and names the day the soonest proof expires.
+
 Training modes:
 - **Pick the read** - walk the authored spots against an opponent you choose, preflop through river
 - **Deal me a drill** - up to five spot/read pairings you do not get to choose, dealt from the gaps in your coverage: never-seen pairings first, then the ones still open, then the ones due for review, then the ones answered right only once
@@ -90,6 +92,7 @@ Training modes:
 - **Drill the direction you miss in** - offered from the training history once a bias shows, replays only the open pairings you got wrong that way
 
 Sections:
+- Next-up recommendation above the mode selector, with the count, the reason, and the one button that clears it  
 - Mode selector  
 - Street focus chips, each showing how much of that street has been proven  
 - Spot panel with hole cards, board, and game-state tags  

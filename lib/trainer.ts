@@ -751,6 +751,80 @@ export function buildRefreshDrill(
 }
 
 /**
+ * The queue a training plan points at, or 'sharpen' when none of them has
+ * anything waiting.
+ *
+ * The four real queues are the coverage statuses a drill can be built from.
+ * 'mastered' is not one of them: a pairing that is proven and still fresh is
+ * the one state the trainer has nothing to ask about, which is exactly what
+ * 'sharpen' means -- the grid is clear, so train for the sake of it.
+ */
+export type PlanQueue = Exclude<CoverageStatus, 'mastered'> | 'sharpen'
+
+/** Which queue to train next, and the drill that empties it. */
+export interface TrainingPlan {
+  queue: PlanQueue
+  /** The session kind that drills this queue. */
+  kind: SessionKind
+  /** Pairings waiting in that queue. Zero only for 'sharpen'. */
+  waiting: number
+  /**
+   * Whole days until the soonest still-proven pairing comes up for review, or
+   * null when nothing is proven and dated. This is what makes the 'sharpen'
+   * state readable: the grid is clear *for now*, and this says for how long.
+   */
+  nextReviewInDays: number | null
+}
+
+/** The drill each queue is emptied by. Mirrors the mode picker's five options. */
+const queueKinds: Record<Exclude<PlanQueue, 'sharpen'>, SessionKind> = {
+  untested: 'drill',
+  open: 'retry',
+  stale: 'refresh',
+  learning: 'confirm',
+}
+
+/**
+ * Names the one queue a visitor should train next.
+ *
+ * The trainer can now deal four different drills off the same grid, and the
+ * mode picker offers whichever of them have hands in them -- which leaves a
+ * returning visitor reading five buttons to work out what they owe. This
+ * answers that in one line: the front of the queue, how much is in it, and
+ * which drill empties it.
+ *
+ * Priority is `coveragePriority`, the same order `buildCoverageDrill` deals
+ * in, so the recommendation and the deal cannot disagree about what matters
+ * most. Deliberately blind to the street focus: the plan is a read on the
+ * whole grid, so it recommends a drill over the whole grid.
+ *
+ * Returns 'sharpen' rather than null when every pairing is proven and fresh,
+ * because "nothing is due" is still worth saying -- and a mixed drill is still
+ * worth playing.
+ */
+export function planNextSession(coverage: CoverageCell[]): TrainingPlan {
+  const nextReviewInDays = coverage.reduce<number | null>((soonest, cell) => {
+    if (cell.status !== 'mastered' || cell.reviewDueInDays === null) return soonest
+
+    return soonest === null || cell.reviewDueInDays < soonest ? cell.reviewDueInDays : soonest
+  }, null)
+
+  const queues = (Object.keys(queueKinds) as Array<Exclude<PlanQueue, 'sharpen'>>).sort(
+    (a, b) => coveragePriority[a] - coveragePriority[b],
+  )
+
+  for (const queue of queues) {
+    const waiting = coverage.filter((cell) => cell.status === queue).length
+
+    if (waiting > 0) {
+      return { queue, kind: queueKinds[queue], waiting, nextReviewInDays }
+    }
+  }
+
+  return { queue: 'sharpen', kind: 'drill', waiting: 0, nextReviewInDays }
+}
+
+/**
  * Which side of the max-EV line a wrong answer fell on.
  *
  * Reads the authored action order in `lib/spots.ts`, which runs from the most

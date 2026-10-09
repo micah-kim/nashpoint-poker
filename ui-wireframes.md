@@ -50,6 +50,7 @@ Side‑by‑side:
 ---
 
 ## Demo Page (Interactive Spot Trainer)
+- "Next up" banner at the top of the mode card: the queue at the front of the drill order, its count ("12 pairings you have never played"), and the single button that drills it. On a cleared grid it reads "Nothing is due" and names how many days until the soonest proof expires  
 - Mode selector: "Pick the read" vs "Deal me a drill", plus "Drill my open leaks (n)" once this browser has unsolved pairings, "Confirm what I guessed (n)" once it has pairings answered right exactly once, and "Review what has gone cold (n)" once a proven pairing has gone stale (switching starts a fresh session)  
 - Street focus chips under the mode selector: "Any street", Preflop, Flop, Turn, River, each with its proven/total count. Clicking one deals a drill from that street immediately  
 - Welcome-back line under the mode selector on a return visit: spots played, sessions, lifetime accuracy, open leaks, pairings proven, and how many are due for review  
@@ -71,6 +72,7 @@ Side‑by‑side:
 - Coverage grid: a fifth cell state, a dashed amber "due for review", sitting between proven and right-once in the legend. Cell labels carry the dates: days since last played when due, days until review when still proven  
 - Restart controls: re-run / re-deal / run the retry hands back, plus a switch to the other mode  
 - Training history card (only once a session has been finished in this browser):
+  - The same "Next up" banner, so the recap ends by naming what to train next
   - Lifetime spots played + sessions, lifetime optimal %, lifetime EV lost
   - Trend: this session's accuracy versus everything before it, in points
   - The read that has cost the most across every session
