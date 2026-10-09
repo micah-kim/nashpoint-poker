@@ -25,6 +25,7 @@ import {
   getRecommendation,
   gradeAnswer,
   missDirection,
+  planNextSession,
   reviewSession,
   summarizeByOpponent,
   summarizeSession,
@@ -35,6 +36,7 @@ import {
   type DrillFocus,
   type Grade,
   type OpponentBreakdown,
+  type PlanQueue,
   type ReviewRow,
   type SessionKind,
   type StreetProgress,
@@ -42,6 +44,7 @@ import {
   type TendencyDirection,
   type TendencySide,
   type TendencySummary,
+  type TrainingPlan,
   type Verdict,
 } from '@/lib/trainer'
 
@@ -102,6 +105,14 @@ function pluralMisses(count: number): string {
   return count === 1 ? demoContent.tendencyMistakeSingularLabel : demoContent.tendencyMistakeLabel
 }
 
+function pluralPairings(count: number): string {
+  return count === 1 ? demoContent.planPairingLabel : demoContent.planPairingsLabel
+}
+
+function pluralDays(count: number): string {
+  return count === 1 ? demoContent.planNextReviewDayLabel : demoContent.planNextReviewDaysLabel
+}
+
 function formatBb(value: number): string {
   // Negating a zero EV loss yields -0, which would render as "-0.00 BB".
   const signed = value === 0 ? 0 : value
@@ -155,6 +166,8 @@ export default function DemoContent() {
     () => buildRefreshDrill(careerSummary.coverage),
     [careerSummary.coverage],
   )
+  /** The one queue worth clearing next, named from the grid rather than chosen. */
+  const plan = useMemo(() => planNextSession(careerSummary.coverage), [careerSummary.coverage])
 
   const kind: SessionKind = dealt?.kind ?? 'explore'
   const isDealt = dealt !== null
@@ -315,6 +328,32 @@ export default function DemoContent() {
     startRetry(leakHands)
   }
 
+  /**
+   * Starts whichever drill `planNextSession` put at the front of the queue.
+   *
+   * The drill case deals over the whole grid rather than the focused street,
+   * because the plan is a read on the whole grid: a turn-focused deal could
+   * hand back pairings the recommendation was not about.
+   */
+  function startPlan(nextPlan: TrainingPlan) {
+    if (nextPlan.kind === 'retry') {
+      startLeakDrill()
+      return
+    }
+
+    if (nextPlan.kind === 'confirm') {
+      startConfirmDrill()
+      return
+    }
+
+    if (nextPlan.kind === 'refresh') {
+      startRefreshDrill()
+      return
+    }
+
+    startDrill('all')
+  }
+
   function resetHistory() {
     clearHistory()
     setCareer(emptyHistory)
@@ -348,6 +387,7 @@ export default function DemoContent() {
 
         {!isFinished && (
           <Card variant="elevated" className="max-w-3xl mx-auto mb-10">
+            <NextUpPanel plan={plan} onStart={startPlan} className="mb-5" />
             <p className="text-xs uppercase tracking-wide text-brand-text-secondary mb-3">
               {demoContent.modeHeading}
             </p>
@@ -454,6 +494,7 @@ export default function DemoContent() {
             onRefresh={startRefreshDrill}
             onSwitchMode={kind === 'explore' ? () => startDrill(focus) : startExplore}
             onResetHistory={resetHistory}
+            onStartPlan={startPlan}
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -724,6 +765,8 @@ interface SessionSummaryPanelProps {
   onRefresh: () => void
   onSwitchMode: () => void
   onResetHistory: () => void
+  /** Starts the drill `planNextSession` recommends from the career panel. */
+  onStartPlan: (plan: TrainingPlan) => void
 }
 
 const restartCtas: Record<SessionKind, string> = {
@@ -744,6 +787,7 @@ function SessionSummaryPanel({
   onRefresh,
   onSwitchMode,
   onResetHistory,
+  onStartPlan,
 }: SessionSummaryPanelProps) {
   const summary = useMemo(() => summarizeSession(grades), [grades])
   const review = useMemo(() => reviewSession(grades), [grades])
@@ -825,6 +869,7 @@ function SessionSummaryPanel({
           onConfirm={onConfirm}
           onRefresh={onRefresh}
           onResetHistory={onResetHistory}
+          onStartPlan={onStartPlan}
         />
       )}
 
@@ -857,6 +902,7 @@ interface CareerPanelProps {
   onConfirm: () => void
   onRefresh: () => void
   onResetHistory: () => void
+  onStartPlan: (plan: TrainingPlan) => void
 }
 
 /**
@@ -869,6 +915,7 @@ function CareerPanel({
   onConfirm,
   onRefresh,
   onResetHistory,
+  onStartPlan,
 }: CareerPanelProps) {
   const leakHands = useMemo(() => buildRetryDrill(career.openLeaks), [career.openLeaks])
   const confirmHands = useMemo(() => buildConfirmDrill(career.coverage), [career.coverage])
@@ -890,6 +937,7 @@ function CareerPanel({
     career.latestAccuracy !== null && career.priorAccuracy !== null
       ? career.latestAccuracy - career.priorAccuracy
       : null
+  const plan = useMemo(() => planNextSession(career.coverage), [career.coverage])
 
   return (
     <Card variant="elevated">
@@ -899,7 +947,9 @@ function CareerPanel({
           {demoContent.careerResetCta}
         </Button>
       </div>
-      <p className="text-xs text-brand-text-secondary mb-6">{demoContent.careerHint}</p>
+      <p className="text-xs text-brand-text-secondary mb-4">{demoContent.careerHint}</p>
+
+      <NextUpPanel plan={plan} onStart={onStartPlan} className="mb-6" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <CareerStat
@@ -1311,6 +1361,82 @@ function ReviewListItem({ row, index }: ReviewListItemProps) {
         )}
       </p>
     </li>
+  )
+}
+
+/**
+ * CTA for each queue, reusing the mode picker's own labels so the
+ * recommendation and the button it points at read the same.
+ */
+const planCtas: Record<PlanQueue, string> = {
+  untested: demoContent.drillModeLabel,
+  open: demoContent.leakModeLabel,
+  stale: demoContent.refreshModeLabel,
+  learning: demoContent.confirmModeLabel,
+  sharpen: demoContent.drillModeLabel,
+}
+
+interface NextUpPanelProps {
+  plan: TrainingPlan
+  onStart: (plan: TrainingPlan) => void
+  className?: string
+}
+
+/**
+ * The one line that answers "what should I train right now".
+ *
+ * The mode picker below it offers every drill that currently has hands in it,
+ * which is up to five buttons for a returning visitor to rank themselves.
+ * This ranks them: `planNextSession` names the front of the queue and this
+ * renders it as a count, a reason, and the single button that clears it.
+ */
+function NextUpPanel({ plan, onStart, className = '' }: NextUpPanelProps) {
+  /** Null once the grid is clear, which is the one state with no queue to name. */
+  const queueLabel =
+    plan.queue === 'sharpen' ? null : demoContent.planQueueLabels[plan.queue]
+
+  return (
+    <div
+      className={`rounded-md border border-brand-accent/40 bg-brand-accent/10 px-4 py-3 ${className}`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-brand-accent mb-1">
+            {demoContent.planHeading}
+          </p>
+          {queueLabel === null ? (
+            <p className="text-sm text-brand-text-primary">
+              <span className="font-semibold">{demoContent.planSharpenLead}</span>{' '}
+              <span className="text-brand-text-secondary">{demoContent.planSharpenNote}</span>
+            </p>
+          ) : (
+            <p className="text-sm text-brand-text-primary">
+              <span className="font-semibold tabular-nums">{plan.waiting}</span>{' '}
+              {pluralPairings(plan.waiting)} {queueLabel}.
+            </p>
+          )}
+        </div>
+        <Button size="sm" onClick={() => onStart(plan)} className="shrink-0 whitespace-nowrap">
+          {planCtas[plan.queue]}
+        </Button>
+      </div>
+      {/*
+        A cleared grid has no queue order to explain, so it says when the next
+        proof expires instead. Before mount nothing has aged, so there is no
+        date to report and the note is dropped rather than guessed at.
+      */}
+      {queueLabel === null ? (
+        plan.nextReviewInDays !== null && (
+          <p className="text-xs text-brand-text-secondary mt-3">
+            {demoContent.planNextReviewLabel}{' '}
+            <span className="tabular-nums">{plan.nextReviewInDays}</span>{' '}
+            {pluralDays(plan.nextReviewInDays)}.
+          </p>
+        )
+      ) : (
+        <p className="text-xs text-brand-text-secondary mt-3">{demoContent.planHint}</p>
+      )}
+    </div>
   )
 }
 

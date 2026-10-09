@@ -20,6 +20,7 @@ import {
   masteryFreshDays,
   MASTERY_REPS,
   missDirection,
+  planNextSession,
   reviewSession,
   summarizeByOpponent,
   summarizeCoverage,
@@ -1741,5 +1742,205 @@ describe('buildTendencyDrill', () => {
       'btn-cbet-tptk/gto',
       'bb-river-bluffcatch/gto',
     ])
+  })
+})
+
+describe('planNextSession', () => {
+  const [first, second] = allPairings
+
+  /**
+   * Proves every pairing but the ones named, `daysAgo` days before `NOW`, so a
+   * scenario can leave exactly one queue with anything in it.
+   */
+  function proveAllExcept(excluded: typeof allPairings, daysAgo = 0) {
+    return allPairings
+      .filter((pairing) => !excluded.includes(pairing))
+      .flatMap((pairing) => rowsAnsweredDaysAgo(proveFully(pairing), daysAgo))
+  }
+
+  it('starts a new visitor on a drill of everything they have never played', () => {
+    expect(planNextSession(buildCoverage([], NOW))).toEqual({
+      queue: 'untested',
+      kind: 'drill',
+      waiting: allPairings.length,
+      nextReviewInDays: null,
+    })
+  })
+
+  it('degrades to the cleared state on an empty grid rather than throwing', () => {
+    expect(planNextSession([])).toEqual({
+      queue: 'sharpen',
+      kind: 'drill',
+      waiting: 0,
+      nextReviewInDays: null,
+    })
+  })
+
+  it('hands back open leaks once nothing is unseen', () => {
+    const rows = [...rowsAnsweredDaysAgo([gradeBadly(first)], 0), ...proveAllExcept([first])]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(summarizeCoverage(coverage).untested).toBe(0)
+    expect(planNextSession(coverage)).toMatchObject({ queue: 'open', kind: 'retry', waiting: 1 })
+  })
+
+  it('puts a still-open leak ahead of a proof that has expired', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo([gradeBadly(first)], 0),
+      ...rowsAnsweredDaysAgo(proveFully(second), MASTERY_FRESH_DAYS + 5),
+      ...proveAllExcept([first, second]),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(summarizeCoverage(coverage)).toMatchObject({ untested: 0, open: 1, stale: 1 })
+    expect(planNextSession(coverage).queue).toBe('open')
+  })
+
+  it('puts an expired proof ahead of a pairing nailed exactly once', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(first), MASTERY_FRESH_DAYS + 5),
+      ...rowsAnsweredDaysAgo([gradeOptimally(second)], 0),
+      ...proveAllExcept([first, second]),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(summarizeCoverage(coverage)).toMatchObject({
+      untested: 0,
+      open: 0,
+      stale: 1,
+      learning: 1,
+    })
+    expect(planNextSession(coverage)).toMatchObject({
+      queue: 'stale',
+      kind: 'refresh',
+      waiting: 1,
+    })
+  })
+
+  it('asks for a second rep once that is all that is missing', () => {
+    const rows = [...rowsAnsweredDaysAgo([gradeOptimally(first)], 0), ...proveAllExcept([first])]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(planNextSession(coverage)).toMatchObject({
+      queue: 'learning',
+      kind: 'confirm',
+      waiting: 1,
+    })
+  })
+
+  it('reports a cleared grid rather than inventing a queue', () => {
+    const coverage = buildCoverage(proveAllExcept([]), NOW)
+
+    expect(summarizeCoverage(coverage).mastered).toBe(allPairings.length)
+    expect(planNextSession(coverage)).toMatchObject({
+      queue: 'sharpen',
+      kind: 'drill',
+      waiting: 0,
+    })
+  })
+
+  it('says when the soonest proof on a cleared grid expires', () => {
+    const coverage = buildCoverage(proveAllExcept([], 3), NOW)
+
+    expect(planNextSession(coverage).nextReviewInDays).toBe(masteryFreshDays(MASTERY_REPS) - 3)
+  })
+
+  it('reports the soonest expiry when proofs are dated differently', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(first), 1),
+      ...rowsAnsweredDaysAgo(proveFully(second), MASTERY_FRESH_DAYS - 2),
+      ...proveAllExcept([first, second]),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(planNextSession(coverage).nextReviewInDays).toBe(2)
+  })
+
+  it('leaves an expired proof out of the next review, because it is already due', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(first), MASTERY_FRESH_DAYS + 10),
+      ...proveAllExcept([first], 1),
+    ]
+
+    expect(planNextSession(buildCoverage(rows, NOW))).toMatchObject({
+      queue: 'stale',
+      nextReviewInDays: MASTERY_FRESH_DAYS - 1,
+    })
+  })
+
+  it('does not age a grid with no clock, the way a live session does not', () => {
+    const coverage = buildCoverage(proveAllExcept([], 10_000))
+
+    expect(planNextSession(coverage)).toMatchObject({ queue: 'sharpen', nextReviewInDays: null })
+  })
+
+  it('names the same queue the next coverage drill deals from', () => {
+    const scenarios = [
+      buildCoverage([], NOW),
+      buildCoverage(
+        [...rowsAnsweredDaysAgo([gradeBadly(first)], 0), ...proveAllExcept([first])],
+        NOW,
+      ),
+      buildCoverage(
+        [
+          ...rowsAnsweredDaysAgo(proveFully(first), MASTERY_FRESH_DAYS + 1),
+          ...proveAllExcept([first]),
+        ],
+        NOW,
+      ),
+      buildCoverage(
+        [...rowsAnsweredDaysAgo([gradeOptimally(first)], 0), ...proveAllExcept([first])],
+        NOW,
+      ),
+    ]
+
+    for (const coverage of scenarios) {
+      const plan = planNextSession(coverage)
+      const [dealt] = buildCoverageDrill(coverage, 2026)
+      const cell = coverage.find(
+        (candidate) =>
+          candidate.spot === dealt.spot && candidate.opponent.id === dealt.opponentId,
+      )!
+
+      expect(cell.status, `plan named ${plan.queue}`).toBe(plan.queue)
+    }
+  })
+
+  it('counts the open leaks the career panel would hand back', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo([gradeBadly(first)], 0),
+      ...rowsAnsweredDaysAgo([gradeBadly(second)], 0),
+      ...proveAllExcept([first, second]),
+    ]
+    const plan = planNextSession(buildCoverage(rows, NOW))
+
+    expect(plan).toMatchObject({ queue: 'open', kind: 'retry', waiting: 2 })
+    expect(buildRetryDrill(summarizeLeakProgress(rows).open)).toHaveLength(plan.waiting)
+  })
+
+  it('counts the pairings the review run would deal', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(first), MASTERY_FRESH_DAYS + 1),
+      ...rowsAnsweredDaysAgo(proveFully(second), MASTERY_FRESH_DAYS + 2),
+      ...proveAllExcept([first, second]),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+    const plan = planNextSession(coverage)
+
+    expect(plan).toMatchObject({ queue: 'stale', kind: 'refresh', waiting: 2 })
+    expect(buildRefreshDrill(coverage)).toHaveLength(plan.waiting)
+  })
+
+  it('counts the pairings the confirm run would deal', () => {
+    const rows = [
+      ...rowsAnsweredDaysAgo([gradeOptimally(first)], 0),
+      ...rowsAnsweredDaysAgo([gradeOptimally(second)], 0),
+      ...proveAllExcept([first, second]),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+    const plan = planNextSession(coverage)
+
+    expect(plan).toMatchObject({ queue: 'learning', kind: 'confirm', waiting: 2 })
+    expect(buildConfirmDrill(coverage)).toHaveLength(plan.waiting)
   })
 })

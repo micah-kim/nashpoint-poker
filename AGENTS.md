@@ -18,6 +18,8 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - Mastery expires. `buildCoverage` takes an optional `now`, and a pairing proven longer ago than `masteryFreshDays(streak)` comes back as `stale` -- due for review, not a leak. Each clean rep past `MASTERY_REPS` doubles that window up to `MASTERY_FRESH_CAP_DAYS`.
 - Nothing ages without a `now`, and nothing ages without a date on the row. A live session passes neither, so it never goes stale mid-run; only the stored history, whose rows are stamped with their session's `completedAt`, can expire. That is also the hydration guard -- see the clock note below.
 - The demo reads the ageing clock into state in the mount effect and refreshes it when a session is recorded, never during render. `summarizeCareer` without a `now` is the server-rendered case, and it must stay the un-aged one or the first client render will not match.
+- `planNextSession` names the one queue to train next and ranks by `coveragePriority`, the same order `buildCoverageDrill` deals in. Keep them on that one order, or the recommendation and the deal will disagree. It is deliberately blind to the street focus and deals over the whole grid.
+- The plan takes no seed and deals no hands, so it can be derived during render. The handler it starts is what reads the clock.
 - Closing a leak and proving a pairing are deliberately different bars: `summarizeLeakProgress` closes a leak on one clean answer, `buildCoverage` proves a pairing on two. Do not collapse them -- the gap between the two is what the confirm drill deals.
 - The recap's retry drill re-deals the missed spot/read pairings from the session's own grades, so it stays deterministic.
 - Training history is `localStorage` only -- no account and no network. `lib/progress.ts` parses it defensively, because a grade pointing at a spot or action that a later deploy removed would make `reviewSession` throw.
@@ -40,7 +42,7 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - `tailwind.config.ts` and `DESIGN_TOKENS.md` for brand tokens and styling rules
 - `app/page.tsx` and the landing-page sections in `components/`
 - `components/WaitlistForm.tsx`, `app/api/waitlist/route.ts`, and `lib/validation.ts` for the signup flow and its shared validation
-- `lib/spots.ts` and `lib/trainer.ts` for the `/demo` spot trainer data, grading, coverage, mastery reps and their expiry, per-street progress, drill dealing and focusing, retry, confirm, review and tendency drills, miss-direction diagnosis, leak tracking, and session review
+- `lib/spots.ts` and `lib/trainer.ts` for the `/demo` spot trainer data, grading, coverage, mastery reps and their expiry, per-street progress, drill dealing and focusing, retry, confirm, review and tendency drills, the next-up recommendation, miss-direction diagnosis, leak tracking, and session review
 - `lib/progress.ts` for the persisted training history and the lifetime career rollup behind the demo's career card, coverage grid, and miss-direction panel
 - `lib/validation.test.ts`, `lib/trainer.test.ts`, and `lib/progress.test.ts` for the Vitest suites covering validation, trainer logic, and persistence
 - `system-architecture.md` for future-state context only

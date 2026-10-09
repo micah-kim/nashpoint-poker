@@ -62,7 +62,7 @@ nashpoint-poker/
 │   ├── hooks.ts                  # Shared React hooks
 │   ├── progress.ts               # localStorage training history and career rollup
 │   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
-│   ├── trainer.ts                # Grading, coverage, mastery reps and their expiry, street progress, drill dealing, retry, confirm, review and tendency drills, miss-direction diagnosis, leak tracking, session review
+│   ├── trainer.ts                # Grading, coverage, mastery reps and their expiry, street progress, drill dealing, retry, confirm, review and tendency drills, the next-up recommendation, miss-direction diagnosis, leak tracking, session review
 │   └── validation.ts             # Shared waitlist validation
 │
 ├── 📚 Documentation
@@ -130,6 +130,7 @@ nashpoint-poker/
 - The coverage grid shows every spot/read pairing as untested, open, stale, learning, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`)
 - Mastery takes `MASTERY_REPS` consecutive optimal answers; a pairing clean once but not twice sits in `learning`, which is what the confirm drill deals
 - Mastery also expires: a pairing goes `stale` once it has gone unplayed for the window its streak earned (`MASTERY_FRESH_DAYS`, doubling per extra clean rep up to `MASTERY_FRESH_CAP_DAYS`), which is what the review drill deals. Rows are dated from the session that graded them, so only a stored history ages
+- A "Next up" banner names the one queue worth clearing -- unseen, open, expired, or a rep short -- and starts the drill that empties it, so five mode buttons collapse to one recommendation (`planNextSession`)
 - Per-street progress splits that grid preflop through river, both on the drill chips and in the recap (`summarizeStreets`)
 - The career card also diagnoses the direction of the misses -- too passive or too aggressive, overall and per street -- and deals back the open pairings missed that way (`missDirection`, `summarizeTendency`, `buildTendencyDrill`)
 - No API calls, no solver dependency, and no account -- history never leaves the browser
