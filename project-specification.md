@@ -102,13 +102,15 @@ Sections:
 - Session summary with hand-by-hand review, a per-read breakdown, and a biggest-leak callout  
 - Retry CTA on the recap that re-deals the missed spot/read pairings  
 - Training history card with lifetime accuracy, the read that costs the most, pairings due for review, leaks closed, and the leaks still open  
+- Recent-form panel: an accuracy trend over your last three sessions against the three before them, then a session-by-session log of everything this browser has kept -- which drill it was, how much of it you nailed, what it cost, and how long ago  
 - Coverage grid of every spot against every read, marking what is untested, still open, answered right once, and proven  
 - Per-street progress bars showing which street of your game has never been tested  
 - Miss-direction panel naming whether wrong answers were too passive or too aggressive, what each direction has cost, and how that splits per street  
 - Waitlist CTA  
 - **Data:** seven static, hand-authored spots covering every street, each one's actions authored from the most passive line to the most aggressive. Teaching numbers, not solver output. No solver, no API calls, no backend  
 - **Mastery:** a pairing counts as proven only after two consecutive optimal answers. A spot offers two to four lines, so one clean answer is inside guessing range; a miss resets the run
-- **Storage:** finished sessions are kept in `localStorage` only. No account, and nothing leaves the device
+- **Form:** lifetime accuracy averages over every answer ever given, so after a few sessions it barely moves. The trend is measured over a rolling window of recent sessions against the window before them, pooled by answer, and reports nothing at all until there are sessions on both sides of it
+- **Storage:** finished sessions are kept in `localStorage` only, most recent 25. No account, and nothing leaves the device
 
 ### 5. Global Navigation + Footer
 - Sticky top nav  

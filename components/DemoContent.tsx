@@ -9,9 +9,12 @@ import {
   clearHistory,
   emptyHistory,
   loadHistory,
+  MAX_STORED_SESSIONS,
   saveHistory,
   summarizeCareer,
   type CareerSummary,
+  type SessionLogEntry,
+  type TrainingForm,
   type TrainingHistory,
 } from '@/lib/progress'
 import {
@@ -111,6 +114,21 @@ function pluralPairings(count: number): string {
 
 function pluralDays(count: number): string {
   return count === 1 ? demoContent.planNextReviewDayLabel : demoContent.planNextReviewDaysLabel
+}
+
+/**
+ * How long ago a session was, in words.
+ *
+ * Returns null for an undated session rather than guessing at one: the log is
+ * rendered before the clock is read on mount, and "today" would be a claim the
+ * component cannot make yet.
+ */
+function formatDaysAgo(daysAgo: number | null): string | null {
+  if (daysAgo === null) return null
+  if (daysAgo === 0) return demoContent.formTodayLabel
+  if (daysAgo === 1) return demoContent.formYesterdayLabel
+
+  return `${daysAgo} ${demoContent.formDaysAgoLabel}`
 }
 
 function formatBb(value: number): string {
@@ -933,10 +951,6 @@ function CareerPanel({
         : [],
     [career.openLeaks, career.tendency.bias],
   )
-  const trend =
-    career.latestAccuracy !== null && career.priorAccuracy !== null
-      ? career.latestAccuracy - career.priorAccuracy
-      : null
   const plan = useMemo(() => planNextSession(career.coverage), [career.coverage])
 
   return (
@@ -961,25 +975,9 @@ function CareerPanel({
         <CareerStat label={demoContent.careerEvLabel} value={formatBb(-career.evLost)} />
       </div>
 
-      <div className="space-y-2 mb-6">
-        <div className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
-          <span className="text-sm text-brand-text-secondary">{demoContent.careerTrendLabel}</span>
-          {trend === null ? (
-            <span className="text-xs text-brand-text-secondary text-right">
-              {demoContent.careerFirstSessionNote}
-            </span>
-          ) : (
-            <span
-              className={`text-sm font-semibold tabular-nums shrink-0 ${
-                trend > 0 ? 'text-green-400' : trend < 0 ? 'text-red-400' : 'text-brand-text-secondary'
-              }`}
-            >
-              {trend > 0 ? '+' : ''}
-              {trend} pts
-            </span>
-          )}
-        </div>
+      <TrainingLogPanel form={career.form} />
 
+      <div className="space-y-2 mb-6">
         {career.toughestRead && (
           <div className="flex items-center justify-between gap-3 bg-brand-primary rounded-md px-4 py-3">
             <span className="text-sm text-brand-text-secondary">
@@ -1555,6 +1553,138 @@ function StreetFocusPicker({
  * is left on, which is the thing that tells a visitor where to aim the next
  * drill.
  */
+/**
+ * Sessions the log lists before it stops and says how many are behind them.
+ *
+ * The career card is already long, and the point of the log is the shape of
+ * the recent run rather than a full audit of every session storage kept.
+ */
+const LOG_VISIBLE_SESSIONS = 8
+
+interface TrainingLogPanelProps {
+  form: TrainingForm
+  className?: string
+}
+
+/**
+ * The one panel that answers "am I getting better".
+ *
+ * Every other readout in this card is cumulative: lifetime accuracy, lifetime
+ * EV lost, the coverage grid. They all answer "where do I stand", and after a
+ * few sessions none of them can move much -- a visitor who has genuinely
+ * stopped leaking watches a lifetime percentage crawl.
+ *
+ * This renders the sessions apart instead: the rolling trend from
+ * `summarizeForm` on top, then one row per stored session newest first, so the
+ * run reads as a shape rather than an average. Renders nothing before a first
+ * session is stored, which is the one state with no form to report.
+ *
+ * Dates come from the form rather than from a clock read here, so the panel
+ * renders undated on the server and fills in its relative dates after mount --
+ * the same hydration guard the coverage grid's ageing uses.
+ */
+function TrainingLogPanel({ form, className = 'mb-6' }: TrainingLogPanelProps) {
+  if (form.sessions.length === 0) return null
+
+  const { trend } = form
+  const visible = form.sessions.slice(0, LOG_VISIBLE_SESSIONS)
+  const hidden = form.sessions.length - visible.length
+
+  return (
+    <div className={className}>
+      <h4 className="font-semibold text-brand-text-primary mb-1">{demoContent.formHeading}</h4>
+      <p className="text-xs text-brand-text-secondary mb-3">{demoContent.formHint}</p>
+
+      <div className="bg-brand-primary rounded-md px-4 py-3 mb-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-brand-text-secondary">{demoContent.formTrendLabel}</span>
+          {/*
+            Null until there are sessions on both sides of the window. A zero
+            there would read as "no change" when the truth is "no comparison".
+          */}
+          {trend === null ? (
+            <span className="text-xs text-brand-text-secondary text-right">
+              {demoContent.formFirstSessionsNote}
+            </span>
+          ) : (
+            <span
+              className={`text-sm font-semibold tabular-nums shrink-0 ${
+                trend > 0
+                  ? 'text-green-400'
+                  : trend < 0
+                    ? 'text-red-400'
+                    : 'text-brand-text-secondary'
+              }`}
+            >
+              {trend > 0 ? '+' : ''}
+              {trend} pts
+            </span>
+          )}
+        </div>
+        {trend !== null && (
+          <p className="text-xs text-brand-text-secondary mt-2">
+            {demoContent.formRecentLabel}{' '}
+            <span className="tabular-nums text-brand-text-primary">{form.recentAccuracy}%</span>{' '}
+            over {form.recentSessions} {pluralSessions(form.recentSessions)} &middot;{' '}
+            <span className="tabular-nums text-brand-text-primary">{form.previousAccuracy}%</span>{' '}
+            over the {form.previousSessions} {pluralSessions(form.previousSessions)}{' '}
+            {demoContent.formPreviousLabel}
+          </p>
+        )}
+        <p className="text-xs text-brand-text-secondary mt-2">{demoContent.formTrendNote}</p>
+      </div>
+
+      <div className="flex items-baseline justify-between gap-3 mb-1">
+        <h5 className="text-sm font-semibold text-brand-text-primary">
+          {demoContent.formLogHeading}
+        </h5>
+        <span className="text-xs tabular-nums text-brand-text-secondary">
+          {form.sessions.length}/{MAX_STORED_SESSIONS}
+        </span>
+      </div>
+      <p className="text-xs text-brand-text-secondary mb-3">{demoContent.formLogHint}</p>
+      <ul className="space-y-2">
+        {visible.map((entry) => (
+          <SessionLogItem key={entry.number} entry={entry} />
+        ))}
+      </ul>
+      {hidden > 0 && (
+        <p className="text-xs text-brand-text-secondary mt-2">
+          <span className="tabular-nums">{hidden}</span> {demoContent.formOlderLabel}
+        </p>
+      )}
+      {form.sessions.length >= MAX_STORED_SESSIONS && (
+        <p className="text-xs text-brand-text-secondary mt-2">{demoContent.formCapNote}</p>
+      )}
+    </div>
+  )
+}
+
+/** One finished session: which drill dealt it, how it went, and when. */
+function SessionLogItem({ entry }: { entry: SessionLogEntry }) {
+  const when = formatDaysAgo(entry.daysAgo)
+
+  return (
+    <li className="flex items-center gap-3 bg-brand-primary rounded-md px-4 py-3">
+      <span className="w-24 shrink-0 text-sm text-brand-text-primary truncate">
+        {demoContent.sessionKindLabels[entry.kind]}
+      </span>
+      <div className="flex-1 bg-brand-surface rounded-full h-2">
+        <div
+          className="h-2 rounded-full bg-brand-accent"
+          style={{ width: `${entry.accuracy}%` }}
+        />
+      </div>
+      <span className="text-xs tabular-nums text-brand-text-secondary shrink-0 text-right">
+        {entry.optimal}/{entry.answered} {demoContent.formOptimalLabel}
+        {entry.evLost > 0 && <span className="text-red-400"> &middot; {formatBb(-entry.evLost)}</span>}
+        {/* Dropped on narrow screens rather than wrapping the row onto two lines. */}
+        {when && <span className="hidden sm:inline"> &middot; {when}</span>}
+      </span>
+    </li>
+  )
+}
+
 function StreetProgressPanel({ streetProgress }: { streetProgress: StreetProgress[] }) {
   return (
     <div className="mb-6">

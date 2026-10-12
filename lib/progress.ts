@@ -51,6 +51,134 @@ export interface TrainingHistory {
   sessions: PersistedSession[]
 }
 
+/**
+ * Sessions on each side of the rolling form comparison.
+ *
+ * The trend this feeds has to answer "am I getting better" over a run of
+ * five-hand sessions, where a single session is mostly noise: three spots out
+ * of five is 60% and four is 80%, and nothing about the player changed in
+ * between. Three sessions a side is the smallest window that averages that
+ * out while still being reachable in one sitting.
+ */
+export const FORM_WINDOW_SESSIONS = 3
+
+/** Milliseconds in a day, for turning two timestamps into whole days. */
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** One finished session, summarized for the log rather than for the grid. */
+export interface SessionLogEntry {
+  /** 1-based position in the stored history, counting from the oldest kept. */
+  number: number
+  /** Which drill dealt it. The log is the only place this is ever shown. */
+  kind: SessionKind
+  completedAt: number
+  answered: number
+  optimal: number
+  /** Percentage of this session answered with the highest-EV line, 0-100. */
+  accuracy: number
+  /** Big blinds given up in this session. */
+  evLost: number
+  /**
+   * Whole days between this session and `now`, or null when the caller passed
+   * no clock. Clamped at zero the same way coverage ageing is, so a session
+   * stamped ahead of the clock reads as today rather than as a future date.
+   */
+  daysAgo: number | null
+}
+
+/** How a visitor's recent sessions have gone, and which way they are going. */
+export interface TrainingForm {
+  /** Every stored session, newest first -- the order a log is read in. */
+  sessions: SessionLogEntry[]
+  /**
+   * Accuracy pooled over the most recent `FORM_WINDOW_SESSIONS` sessions, or
+   * null with nothing stored. Pooled over answers rather than averaged over
+   * sessions, so a short session cannot weigh as much as a full one.
+   */
+  recentAccuracy: number | null
+  /** The same over the window before it, or null when there is not one yet. */
+  previousAccuracy: number | null
+  /** Points of accuracy gained on that window, or null with nothing to compare. */
+  trend: number | null
+  /** Sessions each side of the comparison actually drew on. */
+  recentSessions: number
+  previousSessions: number
+  /** Whole days since the newest session, or null when there is no clock. */
+  daysSinceLastSession: number | null
+}
+
+/**
+ * Rolls a history up into a session-by-session log and a rolling trend.
+ *
+ * `summarizeCareer` collapses every session into one lifetime accuracy, which
+ * is the one number that cannot move once a visitor has played a while: the
+ * history it is averaged over keeps growing. So a player who has genuinely
+ * stopped leaking sees a lifetime figure that barely budges, and the trainer
+ * has no way to tell them they are improving.
+ *
+ * This keeps the sessions apart. Each entry is one finished session graded on
+ * its own, and the trend compares the most recent `FORM_WINDOW_SESSIONS`
+ * against the window immediately before them -- a like-for-like comparison of
+ * recent play against slightly older play, rather than one session against a
+ * career.
+ *
+ * The windows are pooled by answer, not averaged by session, so the trend
+ * cannot be moved by a street drill that only had two hands in it. A window
+ * with no sessions before it has nothing to compare against and reports a
+ * null trend rather than a flattering zero.
+ *
+ * Pass `now` to date the entries. Without it they are undated, which is what
+ * server rendering needs -- a clock read during render would not match the
+ * client on hydration, the same reason `buildCoverage` only ages when asked.
+ */
+export function summarizeForm(history: TrainingHistory, now?: number): TrainingForm {
+  const { sessions } = history
+  const accuracyOver = (window: PersistedSession[]): number | null =>
+    window.length === 0
+      ? null
+      : summarizeSession(window.flatMap((entry) => entry.grades)).accuracy
+
+  const entries: SessionLogEntry[] = sessions.map((entry, index) => {
+    const summary = summarizeSession(entry.grades)
+
+    return {
+      number: index + 1,
+      kind: entry.kind,
+      completedAt: entry.completedAt,
+      answered: summary.answered,
+      optimal: summary.optimal,
+      accuracy: summary.accuracy,
+      evLost: summary.evLost,
+      daysAgo:
+        now === undefined ? null : Math.max(0, Math.floor((now - entry.completedAt) / DAY_MS)),
+    }
+  })
+
+  const recent = sessions.slice(-FORM_WINDOW_SESSIONS)
+  // The window before the recent one, which is empty until there are sessions
+  // on both sides -- with four stored sessions the comparison is the last
+  // three against the first one.
+  const previous = sessions.slice(
+    Math.max(0, sessions.length - FORM_WINDOW_SESSIONS * 2),
+    sessions.length - recent.length,
+  )
+  const recentAccuracy = accuracyOver(recent)
+  const previousAccuracy = accuracyOver(previous)
+
+  return {
+    sessions: [...entries].reverse(),
+    recentAccuracy,
+    previousAccuracy,
+    trend:
+      recentAccuracy === null || previousAccuracy === null
+        ? null
+        : recentAccuracy - previousAccuracy,
+    recentSessions: recent.length,
+    previousSessions: previous.length,
+    daysSinceLastSession: entries[entries.length - 1]?.daysAgo ?? null,
+  }
+}
+
 /** Lifetime view of a history, derived the same way the recap derives a session. */
 export interface CareerSummary {
   sessions: number
@@ -82,10 +210,13 @@ export interface CareerSummary {
    * a leak does not erase the fact that folding is how you got there.
    */
   tendency: TendencySummary
-  /** Accuracy of the most recent session, or null when nothing is stored. */
-  latestAccuracy: number | null
-  /** Accuracy before the most recent session, or null when it was the first. */
-  priorAccuracy: number | null
+  /**
+   * The stored sessions kept apart rather than pooled: one entry each, newest
+   * first, plus the rolling trend across the most recent window. This is the
+   * only part of a career that can say which way a visitor is going, because
+   * `accuracy` above averages over a history that only ever grows.
+   */
+  form: TrainingForm
 }
 
 export const emptyHistory: TrainingHistory = { sessions: [] }
@@ -207,8 +338,6 @@ export function summarizeCareer(history: TrainingHistory, now?: number): CareerS
   const summary = summarizeSession(grades)
   const leaks = summarizeLeakProgress(rows)
   const coverage = buildCoverage(rows, now)
-  const latest = sessions[sessions.length - 1]
-  const prior = sessions.slice(0, -1).flatMap((session) => session.grades)
 
   return {
     sessions: sessions.length,
@@ -223,8 +352,7 @@ export function summarizeCareer(history: TrainingHistory, now?: number): CareerS
     coverageStats: summarizeCoverage(coverage),
     streetProgress: summarizeStreets(coverage),
     tendency: summarizeTendency(rows),
-    latestAccuracy: latest ? summarizeSession(latest.grades).accuracy : null,
-    priorAccuracy: prior.length > 0 ? summarizeSession(prior).accuracy : null,
+    form: summarizeForm(history, now),
   }
 }
 

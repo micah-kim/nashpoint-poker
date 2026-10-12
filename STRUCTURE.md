@@ -60,7 +60,7 @@ nashpoint-poker/
 ├── 📚 Lib (Utilities & Content)
 │   ├── content.ts                # Centralized marketing copy & data
 │   ├── hooks.ts                  # Shared React hooks
-│   ├── progress.ts               # localStorage training history and career rollup
+│   ├── progress.ts               # localStorage training history, career rollup, session log and form trend
 │   ├── spots.ts                  # Hand-authored trainer spots and opponent reads
 │   ├── trainer.ts                # Grading, coverage, mastery reps and their expiry, street progress, drill dealing, retry, confirm, review and tendency drills, the next-up recommendation, miss-direction diagnosis, leak tracking, session review
 │   └── validation.ts             # Shared waitlist validation
@@ -127,6 +127,7 @@ nashpoint-poker/
 - The recap can re-deal just the hands that gave up EV as a retry drill (`buildRetryDrill`)
 - Finished sessions are kept in `localStorage` so a returning visitor still has their leaks (`lib/progress.ts`)
 - The career card shows lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open (`summarizeCareer`, `summarizeLeakProgress`)
+- A recent-form panel keeps the stored sessions apart: a rolling trend over the last `FORM_WINDOW_SESSIONS` sessions against the window before them, then one row per session newest first with its drill, accuracy bar, EV lost, and how long ago it was (`summarizeForm`). Lifetime accuracy averages over a history that only grows, so this is the only readout that can show improvement
 - The coverage grid shows every spot/read pairing as untested, open, stale, learning, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`)
 - Mastery takes `MASTERY_REPS` consecutive optimal answers; a pairing clean once but not twice sits in `learning`, which is what the confirm drill deals
 - Mastery also expires: a pairing goes `stale` once it has gone unplayed for the window its streak earned (`MASTERY_FRESH_DAYS`, doubling per extra clean rep up to `MASTERY_FRESH_CAP_DAYS`), which is what the review drill deals. Rows are dated from the session that graded them, so only a stored history ages
