@@ -22,6 +22,9 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - The plan takes no seed and deals no hands, so it can be derived during render. The handler it starts is what reads the clock.
 - Closing a leak and proving a pairing are deliberately different bars: `summarizeLeakProgress` closes a leak on one clean answer, `buildCoverage` proves a pairing on two. Do not collapse them -- the gap between the two is what the confirm drill deals.
 - The recap's retry drill re-deals the missed spot/read pairings from the session's own grades, so it stays deterministic.
+- The career rollup and the session log answer two different questions and must not be collapsed. `summarizeCareer` pools every answer ever given, which is "where do I stand"; `summarizeForm` keeps the sessions apart, which is the only way to say "am I getting better" -- a lifetime percentage averages over a history that only grows, so it stops moving.
+- The form trend compares the last `FORM_WINDOW_SESSIONS` sessions against the window immediately before them, pooled by answer rather than averaged by session, so a two-hand street drill cannot swing it. With nothing on the far side of the window the trend is null, not zero: "no comparison" is not "no change".
+- `summarizeForm` only dates its entries when it is given a `now`, the same hydration rule `buildCoverage` follows. The server-rendered case is the undated one, and the log drops its relative dates rather than guessing at them.
 - Training history is `localStorage` only -- no account and no network. `lib/progress.ts` parses it defensively, because a grade pointing at a spot or action that a later deploy removed would make `reviewSession` throw.
 - A stored session stamped ahead of the clock is clamped to zero days old rather than trusted, so a skewed clock cannot buy a pairing extra freshness.
 - Read storage in an effect, never during render, and write a finished session from the handler that ends it.
@@ -43,7 +46,7 @@ This repo started with a Copilot-driven scaffold, but `AGENTS.md` is now the wor
 - `app/page.tsx` and the landing-page sections in `components/`
 - `components/WaitlistForm.tsx`, `app/api/waitlist/route.ts`, and `lib/validation.ts` for the signup flow and its shared validation
 - `lib/spots.ts` and `lib/trainer.ts` for the `/demo` spot trainer data, grading, coverage, mastery reps and their expiry, per-street progress, drill dealing and focusing, retry, confirm, review and tendency drills, the next-up recommendation, miss-direction diagnosis, leak tracking, and session review
-- `lib/progress.ts` for the persisted training history and the lifetime career rollup behind the demo's career card, coverage grid, and miss-direction panel
+- `lib/progress.ts` for the persisted training history, the lifetime career rollup behind the demo's career card, coverage grid and miss-direction panel, and the session-by-session log and rolling form trend behind the recent-form panel
 - `lib/validation.test.ts`, `lib/trainer.test.ts`, and `lib/progress.test.ts` for the Vitest suites covering validation, trainer logic, and persistence
 - `system-architecture.md` for future-state context only
 

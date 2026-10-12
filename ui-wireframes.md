@@ -74,7 +74,7 @@ Side‑by‑side:
 - Training history card (only once a session has been finished in this browser):
   - The same "Next up" banner, so the recap ends by naming what to train next
   - Lifetime spots played + sessions, lifetime optimal %, lifetime EV lost
-  - Trend: this session's accuracy versus everything before it, in points
+  - "Your recent form" panel: an accuracy trend in points over the last three sessions against the three before them, with both window accuracies and the session counts behind them, or a note when there are not yet sessions on both sides; then "Session by session", one row per stored session newest first with the drill that dealt it, an accuracy bar, optimal/answered, EV lost, and how long ago it was (dropped on narrow screens), a kept/limit counter, and a note once the oldest sessions start dropping off
   - The read that has cost the most across every session
   - Coverage grid: one row per spot, one column per read, each cell untested / still open / right once / proven twice, with a proven-percentage bar, a legend with counts, a note on the two-rep bar, a star on the pairings where the read overrides the baseline, and a "Confirm these (n)" CTA when any pairing is a rep short
   - Street-by-street panel: one bar per street with its proven/total count, any pairings answered right only once, and any still open

@@ -10,6 +10,8 @@ import {
   saveHistory,
   serializeHistory,
   summarizeCareer,
+  summarizeForm,
+  FORM_WINDOW_SESSIONS,
   type CareerSummary,
   type PersistedSession,
   type TrainingHistory,
@@ -175,8 +177,6 @@ describe('summarizeCareer', () => {
       toughestRead: null,
       openLeaks: [],
       closedLeaks: 0,
-      latestAccuracy: null,
-      priorAccuracy: null,
     })
   })
 
@@ -227,7 +227,7 @@ describe('summarizeCareer', () => {
     expect(career.evLost).toBeGreaterThan(0)
   })
 
-  it('splits the newest session out so the trend has something to compare', () => {
+  it('keeps the sessions apart in the form alongside the lifetime totals', () => {
     const career = summarizeCareer(
       historyOf(
         session([gradeAnswer(riverSpot, 'tag', 'call')]),
@@ -235,15 +235,27 @@ describe('summarizeCareer', () => {
       ),
     )
 
-    expect(career.latestAccuracy).toBe(100)
-    expect(career.priorAccuracy).toBe(0)
+    expect(career.accuracy).toBe(50)
+    expect(career.form.sessions.map((entry) => entry.accuracy)).toEqual([100, 0])
   })
 
-  it('has no prior accuracy to compare on a first session', () => {
-    const career = summarizeCareer(historyOf(session([gradeAnswer(riverSpot, 'tag', 'call')])))
+  it('dates the form with the same clock the coverage grid ages against', () => {
+    const career = summarizeCareer(
+      historyOf(session([bestAnswer(riverSpot, 'tag')], 'drill', daysAgo(3))),
+      NOW,
+    )
 
-    expect(career.latestAccuracy).toBe(0)
-    expect(career.priorAccuracy).toBeNull()
+    expect(career.form.sessions[0].daysAgo).toBe(3)
+    expect(career.form.daysSinceLastSession).toBe(3)
+  })
+
+  it('leaves the form undated when the career is not aged', () => {
+    const career = summarizeCareer(
+      historyOf(session([bestAnswer(riverSpot, 'tag')], 'drill', daysAgo(3))),
+    )
+
+    expect(career.form.sessions[0].daysAgo).toBeNull()
+    expect(career.form.daysSinceLastSession).toBeNull()
   })
 
   it('reports an untouched career as an untested grid', () => {
@@ -496,6 +508,167 @@ describe('summarizeCareer ageing', () => {
 
     expect(career.openLeaks).toHaveLength(1)
     expect(career.openLeaks[0].answeredAt).toBe(daysAgo(3))
+  })
+})
+
+describe('summarizeForm', () => {
+  /** A session of `answered` spots with `optimal` of them played perfectly. */
+  function mixedSession(optimal: number, missed: number, completedAt = NOW) {
+    return session(
+      [
+        ...Array.from({ length: optimal }, () => bestAnswer(riverSpot, 'tag')),
+        ...Array.from({ length: missed }, () => gradeAnswer(riverSpot, 'tag', 'call')),
+      ],
+      'drill',
+      completedAt,
+    )
+  }
+
+  it('reports an untouched history as having no form', () => {
+    expect(summarizeForm(emptyHistory)).toEqual({
+      sessions: [],
+      recentAccuracy: null,
+      previousAccuracy: null,
+      trend: null,
+      recentSessions: 0,
+      previousSessions: 0,
+      daysSinceLastSession: null,
+    })
+  })
+
+  it('summarizes one session on its own terms', () => {
+    const form = summarizeForm(historyOf(mixedSession(3, 2)))
+
+    expect(form.sessions).toHaveLength(1)
+    expect(form.sessions[0]).toMatchObject({
+      number: 1,
+      kind: 'drill',
+      answered: 5,
+      optimal: 3,
+      accuracy: 60,
+    })
+    expect(form.sessions[0].evLost).toBeGreaterThan(0)
+  })
+
+  it('lists the sessions newest first but numbers them oldest first', () => {
+    const form = summarizeForm(
+      historyOf(
+        session([bestAnswer(riverSpot, 'tag')], 'explore'),
+        session([bestAnswer(cbetSpot, 'fish')], 'drill'),
+        session([bestAnswer(riverSpot, 'lag')], 'retry'),
+      ),
+    )
+
+    expect(form.sessions.map((entry) => entry.number)).toEqual([3, 2, 1])
+    expect(form.sessions.map((entry) => entry.kind)).toEqual(['retry', 'drill', 'explore'])
+  })
+
+  it('has nothing to compare against until a window has sessions behind it', () => {
+    for (let count = 1; count <= FORM_WINDOW_SESSIONS; count += 1) {
+      const form = summarizeForm(
+        historyOf(...Array.from({ length: count }, () => mixedSession(3, 2))),
+      )
+
+      expect(form.recentSessions).toBe(count)
+      expect(form.previousSessions).toBe(0)
+      expect(form.previousAccuracy).toBeNull()
+      expect(form.trend).toBeNull()
+    }
+  })
+
+  it('compares the recent window against the one before it', () => {
+    const form = summarizeForm(
+      historyOf(
+        mixedSession(1, 4),
+        mixedSession(4, 1),
+        mixedSession(4, 1),
+        mixedSession(4, 1),
+      ),
+    )
+
+    expect(form.recentSessions).toBe(3)
+    expect(form.previousSessions).toBe(1)
+    expect(form.recentAccuracy).toBe(80)
+    expect(form.previousAccuracy).toBe(20)
+    expect(form.trend).toBe(60)
+  })
+
+  it('reports a slide as a negative trend', () => {
+    const form = summarizeForm(
+      historyOf(mixedSession(5, 0), mixedSession(0, 5), mixedSession(0, 5), mixedSession(0, 5)),
+    )
+
+    expect(form.trend).toBe(-100)
+  })
+
+  it('caps the window it compares against rather than reaching back forever', () => {
+    const form = summarizeForm(
+      historyOf(
+        // Session 1 is a window too far back to count once six are stored.
+        mixedSession(0, 5),
+        ...Array.from({ length: FORM_WINDOW_SESSIONS }, () => mixedSession(5, 0)),
+        ...Array.from({ length: FORM_WINDOW_SESSIONS }, () => mixedSession(5, 0)),
+      ),
+    )
+
+    expect(form.recentSessions).toBe(FORM_WINDOW_SESSIONS)
+    expect(form.previousSessions).toBe(FORM_WINDOW_SESSIONS)
+    expect(form.previousAccuracy).toBe(100)
+    expect(form.trend).toBe(0)
+  })
+
+  it('pools a window by answer rather than averaging its sessions', () => {
+    // A one-hand perfect session and a four-hand miss is 20% of the answers,
+    // not the 50% an average of the two session scores would report.
+    const form = summarizeForm(historyOf(mixedSession(1, 0), mixedSession(0, 4)))
+
+    expect(form.recentAccuracy).toBe(20)
+  })
+
+  it('dates every session against the clock it is given', () => {
+    const form = summarizeForm(
+      historyOf(
+        mixedSession(5, 0, daysAgo(9)),
+        mixedSession(5, 0, daysAgo(1)),
+        mixedSession(5, 0, NOW),
+      ),
+      NOW,
+    )
+
+    expect(form.sessions.map((entry) => entry.daysAgo)).toEqual([0, 1, 9])
+    expect(form.daysSinceLastSession).toBe(0)
+  })
+
+  it('leaves the sessions undated without a clock, so a render cannot drift', () => {
+    const form = summarizeForm(historyOf(mixedSession(5, 0, daysAgo(9))), undefined)
+
+    expect(form.sessions[0].daysAgo).toBeNull()
+    expect(form.daysSinceLastSession).toBeNull()
+  })
+
+  it('clamps a session stamped ahead of the clock to today', () => {
+    const form = summarizeForm(historyOf(mixedSession(5, 0, NOW + 5 * DAY_MS)), NOW)
+
+    expect(form.sessions[0].daysAgo).toBe(0)
+  })
+
+  it('leaves the history it was given alone', () => {
+    const history = historyOf(mixedSession(5, 0), mixedSession(0, 5))
+    const order = history.sessions.map((entry) => entry.kind)
+
+    summarizeForm(history, NOW)
+
+    expect(history.sessions.map((entry) => entry.kind)).toEqual(order)
+  })
+
+  it('still reports a form for a history at the storage cap', () => {
+    const history = historyOf(
+      ...Array.from({ length: MAX_STORED_SESSIONS }, () => mixedSession(5, 0)),
+    )
+    const form = summarizeForm(history, NOW)
+
+    expect(form.sessions).toHaveLength(MAX_STORED_SESSIONS)
+    expect(form.trend).toBe(0)
   })
 })
 
