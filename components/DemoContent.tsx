@@ -25,10 +25,13 @@ import {
   buildTendencyDrill,
   drillFocuses,
   findBiggestLeak,
+  getOpponentProfile,
   getRecommendation,
   gradeAnswer,
+  isReadFocus,
   missDirection,
   planNextSession,
+  readFocuses,
   reviewSession,
   summarizeByOpponent,
   summarizeSession,
@@ -40,6 +43,7 @@ import {
   type Grade,
   type OpponentBreakdown,
   type PlanQueue,
+  type ReadProgress,
   type ReviewRow,
   type SessionKind,
   type StreetProgress,
@@ -131,6 +135,18 @@ function formatDaysAgo(daysAgo: number | null): string | null {
   return `${daysAgo} ${demoContent.formDaysAgoLabel}`
 }
 
+/**
+ * How a live focus names itself in the UI.
+ *
+ * A street focus is already its own label; a read focus is an opponent id, so
+ * it has to be resolved back to the profile a visitor recognises.
+ */
+function focusLabel(focus: DrillFocus): string {
+  if (focus === 'all') return demoContent.focusAllLabel
+
+  return isReadFocus(focus) ? getOpponentProfile(focus).label : focus
+}
+
 function formatBb(value: number): string {
   // Negating a zero EV loss yields -0, which would render as "-0.00 BB".
   const signed = value === 0 ? 0 : value
@@ -142,7 +158,7 @@ export default function DemoContent() {
   /** A dealt session, or null while the user is picking the read themselves. */
   const [dealt, setDealt] = useState<DealtSession | null>(null)
   const [spotIndex, setSpotIndex] = useState(0)
-  /** Street the next drill is aimed at. Sticky, so re-dealing stays on street. */
+  /** Street or read the next drill is aimed at. Sticky, so re-dealing stays on it. */
   const [focus, setFocus] = useState<DrillFocus>('all')
   const [pickedOpponentId, setPickedOpponentId] = useState<OpponentId>('tag')
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
@@ -189,7 +205,7 @@ export default function DemoContent() {
 
   const kind: SessionKind = dealt?.kind ?? 'explore'
   const isDealt = dealt !== null
-  /** Only a live drill is on a street; the other modes ignore the focus. */
+  /** Only a live drill is focused; the other modes ignore the focus. */
   const activeFocus: DrillFocus | null = kind === 'drill' ? focus : null
   /** Explore and drill are always offered; the other three have to be earned. */
   const modeCount =
@@ -283,8 +299,8 @@ export default function DemoContent() {
    * the server would not match the client on hydration.
    *
    * A focus with nothing to deal leaves the session alone rather than dealing
-   * an empty drill. The street chips only offer streets that have spots, so
-   * this is a guard rather than a reachable state.
+   * an empty drill. The chips only offer streets and reads that have pairings,
+   * so this is a guard rather than a reachable state.
    */
   function startDrill(nextFocus: DrillFocus) {
     const hands = buildCoverageDrill(careerSummary.coverage, Date.now(), nextFocus)
@@ -457,9 +473,10 @@ export default function DemoContent() {
                 />
               )}
             </div>
-            <StreetFocusPicker
+            <FocusPicker
               activeFocus={activeFocus}
               streetProgress={careerSummary.streetProgress}
+              readProgress={careerSummary.readProgress}
               coverageStats={careerSummary.coverageStats}
               onSelect={startDrill}
             />
@@ -468,7 +485,10 @@ export default function DemoContent() {
             </p>
             {activeFocus && activeFocus !== 'all' && (
               <p className="text-xs text-brand-accent mt-1">
-                {activeFocus} {demoContent.focusActiveNote}
+                {focusLabel(activeFocus)}{' '}
+                {isReadFocus(activeFocus)
+                  ? demoContent.readFocusActiveNote
+                  : demoContent.focusActiveNote}
               </p>
             )}
             {careerSummary.sessions > 0 && (
@@ -513,6 +533,7 @@ export default function DemoContent() {
             onSwitchMode={kind === 'explore' ? () => startDrill(focus) : startExplore}
             onResetHistory={resetHistory}
             onStartPlan={startPlan}
+            onDrillFocus={startDrill}
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -785,6 +806,8 @@ interface SessionSummaryPanelProps {
   onResetHistory: () => void
   /** Starts the drill `planNextSession` recommends from the career panel. */
   onStartPlan: (plan: TrainingPlan) => void
+  /** Deals a focused drill from the career panel's read-by-read breakdown. */
+  onDrillFocus: (focus: DrillFocus) => void
 }
 
 const restartCtas: Record<SessionKind, string> = {
@@ -806,6 +829,7 @@ function SessionSummaryPanel({
   onSwitchMode,
   onResetHistory,
   onStartPlan,
+  onDrillFocus,
 }: SessionSummaryPanelProps) {
   const summary = useMemo(() => summarizeSession(grades), [grades])
   const review = useMemo(() => reviewSession(grades), [grades])
@@ -888,6 +912,7 @@ function SessionSummaryPanel({
           onRefresh={onRefresh}
           onResetHistory={onResetHistory}
           onStartPlan={onStartPlan}
+          onDrillFocus={onDrillFocus}
         />
       )}
 
@@ -921,6 +946,7 @@ interface CareerPanelProps {
   onRefresh: () => void
   onResetHistory: () => void
   onStartPlan: (plan: TrainingPlan) => void
+  onDrillFocus: (focus: DrillFocus) => void
 }
 
 /**
@@ -934,6 +960,7 @@ function CareerPanel({
   onRefresh,
   onResetHistory,
   onStartPlan,
+  onDrillFocus,
 }: CareerPanelProps) {
   const leakHands = useMemo(() => buildRetryDrill(career.openLeaks), [career.openLeaks])
   const confirmHands = useMemo(() => buildConfirmDrill(career.coverage), [career.coverage])
@@ -1025,6 +1052,8 @@ function CareerPanel({
       />
 
       <StreetProgressPanel streetProgress={career.streetProgress} />
+
+      <ReadProgressPanel readProgress={career.readProgress} onDrill={onDrillFocus} />
 
       <TendencyPanel
         tendency={career.tendency}
@@ -1473,52 +1502,34 @@ function ModeOption({ icon, label, hint, isActive, onSelect }: ModeOptionProps) 
   )
 }
 
-interface StreetFocusPickerProps {
-  /** The street the live drill is on, or null when no drill is running. */
+/** One chip's worth of coverage: how much of that slice is proven. */
+interface FocusCount {
+  mastered: number
+  total: number
+}
+
+interface FocusRowProps {
+  heading: string
+  hint: string
+  /** Focuses to offer, in order. Options with no pairings are dropped. */
+  options: DrillFocus[]
+  counts: Map<DrillFocus, FocusCount>
   activeFocus: DrillFocus | null
-  streetProgress: StreetProgress[]
-  coverageStats: CoverageSummary
   onSelect: (focus: DrillFocus) => void
 }
 
-/**
- * Aims a drill at one street, dealing immediately on click.
- *
- * The counter on each chip is that street's proven pairings, so the picker is
- * also the only place the per-street gaps show up before a visitor has
- * finished a session and opened the recap. Streets with no authored spots
- * never reach `summarizeStreets`, so they are never offered.
- */
-function StreetFocusPicker({
-  activeFocus,
-  streetProgress,
-  coverageStats,
-  onSelect,
-}: StreetFocusPickerProps) {
-  const counts = useMemo(() => {
-    const byFocus = new Map<DrillFocus, { mastered: number; total: number }>([
-      ['all', { mastered: coverageStats.mastered, total: coverageStats.total }],
-    ])
-
-    for (const progress of streetProgress) {
-      byFocus.set(progress.street, { mastered: progress.mastered, total: progress.total })
-    }
-
-    return byFocus
-  }, [coverageStats, streetProgress])
-
+/** One axis of the focus picker. Street and read chips differ only in copy. */
+function FocusRow({ heading, hint, options, counts, activeFocus, onSelect }: FocusRowProps) {
   return (
     <div className="mt-4">
-      <p className="text-xs uppercase tracking-wide text-brand-text-secondary mb-2">
-        {demoContent.focusHeading}
-      </p>
+      <p className="text-xs uppercase tracking-wide text-brand-text-secondary mb-2">{heading}</p>
       <div className="flex flex-wrap gap-2">
-        {drillFocuses
+        {options
           .filter((option) => counts.has(option))
           .map((option) => {
             const count = counts.get(option)!
             const isActive = activeFocus === option
-            const label = option === 'all' ? demoContent.focusAllLabel : option
+            const label = option === 'all' ? demoContent.focusAllLabel : focusChipLabel(option)
 
             return (
               <button
@@ -1526,7 +1537,7 @@ function StreetFocusPicker({
                 type="button"
                 onClick={() => onSelect(option)}
                 aria-pressed={isActive}
-                aria-label={`${label}: ${count.mastered} of ${count.total} pairings proven`}
+                aria-label={`${focusLabel(option)}: ${count.mastered} of ${count.total} pairings proven`}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
                   isActive
                     ? 'bg-brand-accent text-brand-primary border-brand-accent font-semibold'
@@ -1541,8 +1552,92 @@ function StreetFocusPicker({
             )
           })}
       </div>
-      <p className="text-xs text-brand-text-secondary mt-2">{demoContent.focusHint}</p>
+      <p className="text-xs text-brand-text-secondary mt-2">{hint}</p>
     </div>
+  )
+}
+
+/** Chips are narrow, so a read wears its short label and a street its name. */
+function focusChipLabel(focus: DrillFocus): string {
+  if (focus === 'all') return demoContent.focusAllLabel
+
+  return isReadFocus(focus) ? getOpponentProfile(focus).shortLabel : focus
+}
+
+interface FocusPickerProps {
+  /** The slice the live drill is aimed at, or null when no drill is running. */
+  activeFocus: DrillFocus | null
+  streetProgress: StreetProgress[]
+  readProgress: ReadProgress[]
+  coverageStats: CoverageSummary
+  onSelect: (focus: DrillFocus) => void
+}
+
+/**
+ * Aims a drill at one street or one read, dealing immediately on click.
+ *
+ * Two rows because the grid has two axes, and a drill is aimed down one of
+ * them at a time -- picking a read clears a street and the other way round.
+ * See `DrillFocus`: a street and a read intersect in too few pairings to fill
+ * a drill, so the picker never offers the intersection.
+ *
+ * The counter on each chip is that slice's proven pairings, so the picker is
+ * also the only place the per-street and per-read gaps show up before a visitor
+ * has finished a session and opened the recap. Streets with no authored spots
+ * and reads with no pairings never reach the summaries, so they are never
+ * offered.
+ */
+function FocusPicker({
+  activeFocus,
+  streetProgress,
+  readProgress,
+  coverageStats,
+  onSelect,
+}: FocusPickerProps) {
+  const streetCounts = useMemo(() => {
+    const byFocus = new Map<DrillFocus, FocusCount>([
+      ['all', { mastered: coverageStats.mastered, total: coverageStats.total }],
+    ])
+
+    for (const progress of streetProgress) {
+      byFocus.set(progress.street, { mastered: progress.mastered, total: progress.total })
+    }
+
+    return byFocus
+  }, [coverageStats, streetProgress])
+
+  const readCounts = useMemo(() => {
+    const byFocus = new Map<DrillFocus, FocusCount>()
+
+    for (const progress of readProgress) {
+      byFocus.set(progress.opponent.id, {
+        mastered: progress.mastered,
+        total: progress.total,
+      })
+    }
+
+    return byFocus
+  }, [readProgress])
+
+  return (
+    <>
+      <FocusRow
+        heading={demoContent.focusHeading}
+        hint={demoContent.focusHint}
+        options={drillFocuses}
+        counts={streetCounts}
+        activeFocus={activeFocus}
+        onSelect={onSelect}
+      />
+      <FocusRow
+        heading={demoContent.readFocusHeading}
+        hint={demoContent.readFocusHint}
+        options={readFocuses}
+        counts={readCounts}
+        activeFocus={activeFocus}
+        onSelect={onSelect}
+      />
+    </>
   )
 }
 
@@ -1685,6 +1780,51 @@ function SessionLogItem({ entry }: { entry: SessionLogEntry }) {
   )
 }
 
+interface CoverageSliceRowProps {
+  label: string
+  /** Width class for the label column; a read's name runs longer than a street. */
+  labelWidth?: string
+  progress: CoverageSummary
+  /** Optional trailing control, such as a drill CTA for this slice. */
+  action?: React.ReactNode
+}
+
+/**
+ * One slice of the coverage grid as a bar plus the counts still owed on it.
+ *
+ * Shared by the street and read panels, which differ in what the grid is sliced
+ * by and whether a drill can be aimed at a row -- not in how a slice reads.
+ */
+function CoverageSliceRow({
+  label,
+  labelWidth = 'w-16',
+  progress,
+  action,
+}: CoverageSliceRowProps) {
+  return (
+    <li className="flex items-center gap-3 bg-brand-primary rounded-md px-4 py-3">
+      <span className={`${labelWidth} shrink-0 text-sm text-brand-text-primary`}>{label}</span>
+      <div className="flex-1 bg-brand-surface rounded-full h-2">
+        <div
+          className="h-2 rounded-full bg-brand-accent"
+          style={{ width: `${progress.percentMastered}%` }}
+        />
+      </div>
+      <span className="text-xs tabular-nums text-brand-text-secondary shrink-0 text-right">
+        {progress.mastered}/{progress.total}
+        {progress.stale > 0 && (
+          <span className="text-brand-accent"> &middot; {progress.stale} due</span>
+        )}
+        {progress.learning > 0 && (
+          <span className="text-brand-accent"> &middot; {progress.learning} once</span>
+        )}
+        {progress.open > 0 && <span className="text-red-400"> &middot; {progress.open} open</span>}
+      </span>
+      {action}
+    </li>
+  )
+}
+
 function StreetProgressPanel({ streetProgress }: { streetProgress: StreetProgress[] }) {
   return (
     <div className="mb-6">
@@ -1694,30 +1834,60 @@ function StreetProgressPanel({ streetProgress }: { streetProgress: StreetProgres
       <p className="text-xs text-brand-text-secondary mb-3">{demoContent.streetProgressHint}</p>
       <ul className="space-y-2">
         {streetProgress.map((progress) => (
-          <li
+          <CoverageSliceRow
             key={progress.street}
-            className="flex items-center gap-3 bg-brand-primary rounded-md px-4 py-3"
-          >
-            <span className="w-16 shrink-0 text-sm text-brand-text-primary">{progress.street}</span>
-            <div className="flex-1 bg-brand-surface rounded-full h-2">
-              <div
-                className="h-2 rounded-full bg-brand-accent"
-                style={{ width: `${progress.percentMastered}%` }}
-              />
-            </div>
-            <span className="text-xs tabular-nums text-brand-text-secondary shrink-0 text-right">
-              {progress.mastered}/{progress.total}
-              {progress.stale > 0 && (
-                <span className="text-brand-accent"> &middot; {progress.stale} due</span>
-              )}
-              {progress.learning > 0 && (
-                <span className="text-brand-accent"> &middot; {progress.learning} once</span>
-              )}
-              {progress.open > 0 && (
-                <span className="text-red-400"> &middot; {progress.open} open</span>
-              )}
-            </span>
-          </li>
+            label={progress.street}
+            progress={progress}
+          />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+interface ReadProgressPanelProps {
+  readProgress: ReadProgress[]
+  onDrill: (focus: DrillFocus) => void
+}
+
+/**
+ * The coverage grid split by opponent read, each row aimed at its own drill.
+ *
+ * The street panel above it answers "where in a hand am I weak"; this answers
+ * "who am I weak against", which is the question an exploitative trainer is
+ * actually for. It is also the only panel that can show a read a visitor has
+ * never faced: the toughest-read callout and the by-read breakdown both rank
+ * answers already given, so a read at zero attempts is invisible in them.
+ *
+ * Every row carries its own CTA because this panel names a gap a drill can be
+ * aimed straight at -- the same loop the confirm and review queues close.
+ */
+function ReadProgressPanel({ readProgress, onDrill }: ReadProgressPanelProps) {
+  return (
+    <div className="mb-6">
+      <h4 className="font-semibold text-brand-text-primary mb-1">
+        {demoContent.readProgressHeading}
+      </h4>
+      <p className="text-xs text-brand-text-secondary mb-3">{demoContent.readProgressHint}</p>
+      <ul className="space-y-2">
+        {readProgress.map((progress) => (
+          <CoverageSliceRow
+            key={progress.opponent.id}
+            label={progress.opponent.shortLabel}
+            labelWidth="w-20"
+            progress={progress}
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 px-2"
+                onClick={() => onDrill(progress.opponent.id)}
+                aria-label={`${demoContent.readProgressDrillLabel} ${progress.opponent.label}`}
+              >
+                {demoContent.readProgressDrillCta}
+              </Button>
+            }
+          />
         ))}
       </ul>
     </div>

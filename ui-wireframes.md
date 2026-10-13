@@ -52,11 +52,12 @@ Side‑by‑side:
 ## Demo Page (Interactive Spot Trainer)
 - "Next up" banner at the top of the mode card: the queue at the front of the drill order, its count ("12 pairings you have never played"), and the single button that drills it. On a cleared grid it reads "Nothing is due" and names how many days until the soonest proof expires  
 - Mode selector: "Pick the read" vs "Deal me a drill", plus "Drill my open leaks (n)" once this browser has unsolved pairings, "Confirm what I guessed (n)" once it has pairings answered right exactly once, and "Review what has gone cold (n)" once a proven pairing has gone stale (switching starts a fresh session)  
-- Street focus chips under the mode selector: "Any street", Preflop, Flop, Turn, River, each with its proven/total count. Clicking one deals a drill from that street immediately  
+- Street focus chips under the mode selector: "Whole grid", Preflop, Flop, Turn, River, each with its proven/total count. Clicking one deals a drill from that street immediately  
+- Read focus chips in a second row under them: one per opponent profile, each with its proven/total count. Clicking one deals a drill against that read across every street. A focus is one axis at a time, so picking a read clears any street  
 - Welcome-back line under the mode selector on a return visit: spots played, sessions, lifetime accuracy, open leaks, pairings proven, and how many are due for review  
 - Spot panel: street/position/pot tags, hole cards, board  
 - Pick-the-read mode: opponent profile selector (five reads, locked once an answer is submitted)  
-- Drill mode: the dealt read, shown read-only -- up to five spot/read hands dealt from the gaps in this browser's coverage, narrowed to the focused street  
+- Drill mode: the dealt read, shown read-only -- up to five spot/read hands dealt from the gaps in this browser's coverage, narrowed to the focused street or read  
 - Action buttons + “Lock in my answer”  
 - Verdict banner with EV given up versus the best line  
 - GTO baseline frequency chart  
@@ -78,6 +79,7 @@ Side‑by‑side:
   - The read that has cost the most across every session
   - Coverage grid: one row per spot, one column per read, each cell untested / still open / right once / proven twice, with a proven-percentage bar, a legend with counts, a note on the two-rep bar, a star on the pairings where the read overrides the baseline, and a "Confirm these (n)" CTA when any pairing is a rep short
   - Street-by-street panel: one bar per street with its proven/total count, any pairings answered right only once, and any still open
+  - Read-by-read panel: the same bars sliced by opponent instead, each row ending in a "Drill" CTA that deals that read straight away
   - "Which way you miss" panel: a row per direction (too passive / too aggressive) with its miss count, EV cost, and share of the damage, the heavier side highlighted; a one-line bias verdict; the same split per street; and a "Drill the ones I played too <direction>" CTA for the open pairings missed that way, replaced by a note when none are left open
   - Leaks closed, and the list of pairings still open with the line you played vs the best line and the direction it missed in
   - "Drill my open leaks (n)" CTA, and a "Reset history" control that forgets everything  

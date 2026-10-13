@@ -15,16 +15,19 @@ import {
   getRecommendation,
   getSpot,
   gradeAnswer,
+  isReadFocus,
   MASTERY_FRESH_CAP_DAYS,
   MASTERY_FRESH_DAYS,
   masteryFreshDays,
   MASTERY_REPS,
   missDirection,
   planNextSession,
+  readFocuses,
   reviewSession,
   summarizeByOpponent,
   summarizeCoverage,
   summarizeLeakProgress,
+  summarizeReads,
   summarizeSession,
   summarizeStreets,
   summarizeTendency,
@@ -585,6 +588,249 @@ describe('summarizeStreets', () => {
     for (const street of reported) {
       expect(drillFocuses).toContain(street)
     }
+  })
+})
+
+describe('summarizeReads', () => {
+  const blankGrid = buildCoverage([])
+
+  it('reports nothing for an empty grid', () => {
+    expect(summarizeReads([])).toEqual([])
+  })
+
+  it('walks the reads in the order the profiles are authored', () => {
+    expect(summarizeReads(blankGrid).map((progress) => progress.opponent.id)).toEqual(
+      opponentProfiles.map((profile) => profile.id),
+    )
+  })
+
+  it('splits the grid without losing or double-counting a pairing', () => {
+    const totals = summarizeReads(blankGrid).reduce((sum, progress) => sum + progress.total, 0)
+
+    expect(totals).toBe(blankGrid.length)
+  })
+
+  it('gives every read the same number of pairings, one per spot', () => {
+    for (const progress of summarizeReads(blankGrid)) {
+      expect(progress.total).toBe(spots.length)
+    }
+  })
+
+  it('reports an unfaced read as entirely untested', () => {
+    for (const progress of summarizeReads(blankGrid)) {
+      expect(progress).toMatchObject({
+        untested: progress.total,
+        mastered: 0,
+        learning: 0,
+        open: 0,
+        percentMastered: 0,
+      })
+    }
+  })
+
+  it('counts a mastered pairing against its own read only', () => {
+    const pairing = allPairings[0]
+    const coverage = buildCoverage(reviewSession(proveFully(pairing)))
+    const progress = summarizeReads(coverage)
+    const faced = progress.find((entry) => entry.opponent.id === pairing.opponentId)!
+
+    expect(faced.mastered).toBe(1)
+    expect(progress.filter((entry) => entry.mastered > 0)).toEqual([faced])
+  })
+
+  it('counts a single clean rep against a read as learning, not proven', () => {
+    const pairing = allPairings[0]
+    const coverage = buildCoverage(reviewSession([gradeOptimally(pairing)]))
+    const faced = summarizeReads(coverage).find(
+      (entry) => entry.opponent.id === pairing.opponentId,
+    )!
+
+    expect(faced).toMatchObject({ learning: 1, mastered: 0, open: 0 })
+  })
+
+  it('counts a pairing that gave up EV as open against that read', () => {
+    const pairing = allPairings[0]
+    const coverage = buildCoverage(reviewSession([gradeBadly(pairing)]))
+    const faced = summarizeReads(coverage).find(
+      (entry) => entry.opponent.id === pairing.opponentId,
+    )!
+
+    expect(faced).toMatchObject({
+      open: 1,
+      mastered: 0,
+      learning: 0,
+      untested: faced.total - 1,
+    })
+  })
+
+  it('reports a proof that has expired as due rather than proven', () => {
+    const pairing = allPairings[0]
+    const rows = rowsAnsweredDaysAgo(proveFully(pairing), MASTERY_FRESH_DAYS + 1)
+    const faced = summarizeReads(buildCoverage(rows, NOW)).find(
+      (entry) => entry.opponent.id === pairing.opponentId,
+    )!
+
+    expect(faced).toMatchObject({ stale: 1, mastered: 0, percentMastered: 0 })
+  })
+
+  it('reaches 100 percent once every spot is proven against a read', () => {
+    const opponentId = opponentProfiles[0].id
+    const against = allPairings.filter((pairing) => pairing.opponentId === opponentId)
+    const coverage = buildCoverage(reviewSession(against.flatMap(proveFully)))
+    const faced = summarizeReads(coverage).find((entry) => entry.opponent.id === opponentId)!
+
+    expect(faced).toMatchObject({
+      mastered: faced.total,
+      learning: 0,
+      untested: 0,
+      percentMastered: 100,
+    })
+  })
+
+  it('agrees with the whole-grid summary once every read is added up', () => {
+    const coverage = buildCoverage(
+      reviewSession([
+        gradeBadly(allPairings[0]),
+        gradeOptimally(allPairings[1]),
+        ...proveFully(allPairings[2]),
+      ]),
+    )
+    const progress = summarizeReads(coverage)
+    const stats = summarizeCoverage(coverage)
+    const sum = (pick: (entry: (typeof progress)[number]) => number) =>
+      progress.reduce((total, entry) => total + pick(entry), 0)
+
+    expect(sum((entry) => entry.mastered)).toBe(stats.mastered)
+    expect(sum((entry) => entry.learning)).toBe(stats.learning)
+    expect(sum((entry) => entry.open)).toBe(stats.open)
+    expect(sum((entry) => entry.untested)).toBe(stats.untested)
+  })
+
+  it('agrees with the street split on the totals, being the same grid', () => {
+    const coverage = buildCoverage(reviewSession(proveFully(allPairings[0])))
+    const byRead = summarizeReads(coverage).reduce((sum, entry) => sum + entry.total, 0)
+    const byStreet = summarizeStreets(coverage).reduce((sum, entry) => sum + entry.total, 0)
+
+    expect(byRead).toBe(byStreet)
+  })
+
+  it('offers a focus for every read it reports, and nothing it does not', () => {
+    const reported = summarizeReads(blankGrid).map((progress) => progress.opponent.id)
+
+    expect(readFocuses).toEqual(opponentProfiles.map((profile) => profile.id))
+
+    for (const opponentId of reported) {
+      expect(readFocuses).toContain(opponentId)
+    }
+  })
+})
+
+describe('isReadFocus', () => {
+  it('reads the whole grid as neither axis', () => {
+    expect(isReadFocus('all')).toBe(false)
+  })
+
+  it.each(streets)('reads %s as a street, not a read', (street) => {
+    expect(isReadFocus(street)).toBe(false)
+  })
+
+  it.each(opponentProfiles)('reads $id as a read, not a street', (profile) => {
+    expect(isReadFocus(profile.id)).toBe(true)
+  })
+
+  it('keeps the two axes of the flat focus type from colliding', () => {
+    const streetNames = new Set<string>(streets)
+
+    for (const profile of opponentProfiles) {
+      expect(streetNames.has(profile.id), `${profile.id} collides with a street name`).toBe(false)
+    }
+  })
+})
+
+describe('read-focused drills', () => {
+  const blankGrid = buildCoverage([])
+
+  it('deals only the focused read', () => {
+    for (const profile of opponentProfiles) {
+      const dealt = buildCoverageDrill(blankGrid, 11, profile.id)
+
+      expect(dealt.length).toBeGreaterThan(0)
+      for (const hand of dealt) {
+        expect(hand.opponentId, `${profile.id} drill dealt ${hand.opponentId}`).toBe(profile.id)
+      }
+    }
+  })
+
+  it('deals a full drill, because every spot pairs with every read', () => {
+    expect(buildCoverageDrill(blankGrid, 5, opponentProfiles[0].id)).toHaveLength(DRILL_LENGTH)
+  })
+
+  it('crosses streets, which is what makes it a different drill to a street one', () => {
+    const streetsDealt = new Set(
+      buildCoverageDrill(blankGrid, 7, opponentProfiles[0].id).map((hand) => hand.spot.street),
+    )
+
+    expect(streetsDealt.size).toBeGreaterThan(1)
+  })
+
+  it('is reproducible from its seed', () => {
+    const opponentId = opponentProfiles[1].id
+
+    expect(buildCoverageDrill(blankGrid, 23, opponentId).map(pairingKey)).toEqual(
+      buildCoverageDrill(blankGrid, 23, opponentId).map(pairingKey),
+    )
+  })
+
+  it('deals the unproven pairings against that read first', () => {
+    const opponentId = opponentProfiles[0].id
+    const against = allPairings.filter((pairing) => pairing.opponentId === opponentId)
+    const [leaked, ...rest] = against
+    // Everything else against this read is proven, and so is every pairing
+    // against every other read -- so only the focus can put the leak first.
+    const elsewhere = allPairings.filter((pairing) => pairing.opponentId !== opponentId)
+    const coverage = buildCoverage(
+      reviewSession([
+        gradeBadly(leaked),
+        ...rest.flatMap(proveFully),
+        ...elsewhere.flatMap(proveFully),
+      ]),
+    )
+
+    expect(summarizeCoverage(coverage).untested).toBe(0)
+    expect(buildCoverageDrill(coverage, 3, opponentId).map(pairingKey)[0]).toBe(pairingKey(leaked))
+  })
+
+  it('narrows a confirm run to one read', () => {
+    const opponentId = opponentProfiles[0].id
+    const [here, elsewhere] = [
+      allPairings.find((pairing) => pairing.opponentId === opponentId)!,
+      allPairings.find((pairing) => pairing.opponentId !== opponentId)!,
+    ]
+    const coverage = buildCoverage(
+      reviewSession([gradeOptimally(here), gradeOptimally(elsewhere)]),
+    )
+
+    expect(buildConfirmDrill(coverage).map(pairingKey)).toHaveLength(2)
+    expect(buildConfirmDrill(coverage, opponentId).map(pairingKey)).toEqual([pairingKey(here)])
+  })
+
+  it('narrows a review run to one read', () => {
+    const opponentId = opponentProfiles[0].id
+    const here = allPairings.find((pairing) => pairing.opponentId === opponentId)!
+    const elsewhere = allPairings.find((pairing) => pairing.opponentId !== opponentId)!
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(here), MASTERY_FRESH_DAYS + 1),
+      ...rowsAnsweredDaysAgo(proveFully(elsewhere), MASTERY_FRESH_DAYS + 1),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(buildRefreshDrill(coverage)).toHaveLength(2)
+    expect(buildRefreshDrill(coverage, opponentId).map(pairingKey)).toEqual([pairingKey(here)])
+  })
+
+  it('deals nothing for a read with no pairings left in the queue', () => {
+    expect(buildConfirmDrill(blankGrid, opponentProfiles[0].id)).toEqual([])
+    expect(buildRefreshDrill(blankGrid, opponentProfiles[0].id)).toEqual([])
   })
 })
 
