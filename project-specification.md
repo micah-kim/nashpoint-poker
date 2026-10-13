@@ -85,6 +85,7 @@ Training modes:
 - **Pick the read** - walk the authored spots against an opponent you choose, preflop through river
 - **Deal me a drill** - up to five spot/read pairings you do not get to choose, dealt from the gaps in your coverage: never-seen pairings first, then the ones still open, then the ones due for review, then the ones answered right only once
 - **Street focus** - aim that drill at Preflop, Flop, Turn, or River and every dealt hand comes from that street
+- **Read focus** - aim it at one opponent type instead and every dealt hand is against that read, across every street. One axis at a time: picking a read clears the street, and the other way round
 - **Retry drill** - offered from the recap, replays only the hands that gave up EV
 - **Drill my open leaks** - offered once this browser has unsolved pairings, replays the leaks still open across every past visit
 - **Confirm what I guessed** - offered once a pairing has been answered right exactly once, re-deals those pairings so a second clean rep can prove them
@@ -95,6 +96,7 @@ Sections:
 - Next-up recommendation above the mode selector, with the count, the reason, and the one button that clears it  
 - Mode selector  
 - Street focus chips, each showing how much of that street has been proven  
+- Read focus chips underneath them, each showing how much of your game against that opponent has been proven  
 - Spot panel with hole cards, board, and game-state tags  
 - Opponent profile selector, or the dealt read in drill mode  
 - Action choice, graded against a hand-authored EV table  
@@ -105,6 +107,7 @@ Sections:
 - Recent-form panel: an accuracy trend over your last three sessions against the three before them, then a session-by-session log of everything this browser has kept -- which drill it was, how much of it you nailed, what it cost, and how long ago  
 - Coverage grid of every spot against every read, marking what is untested, still open, answered right once, and proven  
 - Per-street progress bars showing which street of your game has never been tested  
+- Per-read progress bars showing which opponent you have never been tested against, each with a CTA that drills that read  
 - Miss-direction panel naming whether wrong answers were too passive or too aggressive, what each direction has cost, and how that splits per street  
 - Waitlist CTA  
 - **Data:** seven static, hand-authored spots covering every street, each one's actions authored from the most passive line to the most aggressive. Teaching numbers, not solver output. No solver, no API calls, no backend  

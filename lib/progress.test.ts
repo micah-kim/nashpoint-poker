@@ -373,6 +373,55 @@ describe('summarizeCareer', () => {
     expect(onStreet('Preflop').untested).toBe(onStreet('Preflop').total)
   })
 
+  it('splits the lifetime grid by read without disagreeing with the whole', () => {
+    const career = summarizeCareer(
+      historyOf(
+        session([gradeAnswer(riverSpot, 'tag', 'call')]),
+        session([bestAnswer(cbetSpot, 'fish')], 'drill'),
+      ),
+    )
+    const sum = (pick: (entry: CareerSummary['readProgress'][number]) => number) =>
+      career.readProgress.reduce((total, entry) => total + pick(entry), 0)
+
+    expect(career.readProgress.length).toBeGreaterThan(1)
+    expect(sum((entry) => entry.total)).toBe(career.coverage.length)
+    expect(sum((entry) => entry.mastered)).toBe(career.coverageStats.mastered)
+    expect(sum((entry) => entry.learning)).toBe(career.coverageStats.learning)
+    expect(sum((entry) => entry.open)).toBe(career.coverageStats.open)
+  })
+
+  it('credits each read with only the pairings played against it', () => {
+    const career = summarizeCareer(
+      historyOf(session([bestAnswer(riverSpot, 'fish'), bestAnswer(riverSpot, 'fish')])),
+    )
+    const againstRead = (opponentId: string) =>
+      career.readProgress.find((entry) => entry.opponent.id === opponentId)!
+
+    expect(againstRead('fish').mastered).toBe(1)
+    expect(againstRead('tag').mastered).toBe(0)
+    expect(againstRead('tag').untested).toBe(againstRead('tag').total)
+  })
+
+  it('reports an untouched career as every read untested', () => {
+    const career = summarizeCareer(emptyHistory)
+
+    expect(career.readProgress.length).toBeGreaterThan(1)
+    for (const entry of career.readProgress) {
+      expect(entry).toMatchObject({ untested: entry.total, mastered: 0, percentMastered: 0 })
+    }
+  })
+
+  it('ages a proven read with the same clock the grid uses', () => {
+    const provenAt = 1_700_000_000_000
+    const career = summarizeCareer(
+      historyOf(session([bestAnswer(riverSpot, 'fish'), bestAnswer(riverSpot, 'fish')], 'drill', provenAt)),
+      provenAt + (MASTERY_FRESH_DAYS + 1) * DAY_MS,
+    )
+    const againstFish = career.readProgress.find((entry) => entry.opponent.id === 'fish')!
+
+    expect(againstFish).toMatchObject({ stale: 1, mastered: 0 })
+  })
+
   it('leaves an untouched career with no tendency to diagnose', () => {
     expect(summarizeCareer(emptyHistory).tendency).toMatchObject({
       answered: 0,

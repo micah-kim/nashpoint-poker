@@ -20,6 +20,7 @@ import {
   summarizeByOpponent,
   summarizeCoverage,
   summarizeLeakProgress,
+  summarizeReads,
   summarizeSession,
   summarizeStreets,
   summarizeTendency,
@@ -27,6 +28,7 @@ import {
   type CoverageSummary,
   type Grade,
   type OpponentBreakdown,
+  type ReadProgress,
   type ReviewRow,
   type SessionKind,
   type StreetProgress,
@@ -205,6 +207,15 @@ export interface CareerSummary {
   /** The same grid split by street, preflop through river. */
   streetProgress: StreetProgress[]
   /**
+   * The same grid split by opponent read instead, in authored profile order.
+   *
+   * The other half of the "where am I weak" answer, and the half `toughestRead`
+   * cannot give: that names the read which has cost the most of the answers
+   * already given, which says nothing about a read never faced. A read sitting
+   * at nothing proven is invisible in every other panel on the page.
+   */
+  readProgress: ReadProgress[]
+  /**
    * Which way every wrong answer ever given missed, over all grades rather
    * than the latest attempt at each pairing: a habit is a history, so closing
    * a leak does not erase the fact that folding is how you got there.
@@ -351,6 +362,7 @@ export function summarizeCareer(history: TrainingHistory, now?: number): CareerS
     coverage,
     coverageStats: summarizeCoverage(coverage),
     streetProgress: summarizeStreets(coverage),
+    readProgress: summarizeReads(coverage),
     tendency: summarizeTendency(rows),
     form: summarizeForm(history, now),
   }
