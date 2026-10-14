@@ -15,7 +15,9 @@ import {
   getRecommendation,
   getSpot,
   gradeAnswer,
+  focusSpotId,
   isReadFocus,
+  isSpotFocus,
   MASTERY_FRESH_CAP_DAYS,
   MASTERY_FRESH_DAYS,
   masteryFreshDays,
@@ -24,11 +26,14 @@ import {
   planNextSession,
   readFocuses,
   reviewSession,
+  spotFocus,
+  spotFocuses,
   summarizeByOpponent,
   summarizeCoverage,
   summarizeLeakProgress,
   summarizeReads,
   summarizeSession,
+  summarizeSpots,
   summarizeStreets,
   summarizeTendency,
 } from './trainer'
@@ -120,6 +125,19 @@ describe('spot data', () => {
         `no authored spot on the ${street}`,
       ).toBe(true)
     }
+  })
+
+  it('gives every spot a short title for the places a full one will not fit', () => {
+    for (const spot of spots) {
+      expect(spot.shortTitle.length, `${spot.id} has no short title`).toBeGreaterThan(0)
+      expect(
+        spot.shortTitle.length,
+        `${spot.id} short title is no shorter than its title`,
+      ).toBeLessThan(spot.title.length)
+    }
+
+    const shortTitles = spots.map((spot) => spot.shortTitle)
+    expect(new Set(shortTitles).size, 'two spots share a short title').toBe(shortTitles.length)
   })
 
   it('is authored in street order, so the grid reads like a hand', () => {
@@ -831,6 +849,190 @@ describe('read-focused drills', () => {
   it('deals nothing for a read with no pairings left in the queue', () => {
     expect(buildConfirmDrill(blankGrid, opponentProfiles[0].id)).toEqual([])
     expect(buildRefreshDrill(blankGrid, opponentProfiles[0].id)).toEqual([])
+  })
+})
+
+describe('isSpotFocus', () => {
+  it('reads the whole grid as no spot', () => {
+    expect(isSpotFocus('all')).toBe(false)
+  })
+
+  it.each(streets)('reads %s as a street, not a spot', (street) => {
+    expect(isSpotFocus(street)).toBe(false)
+  })
+
+  it.each(opponentProfiles)('reads $id as a read, not a spot', (profile) => {
+    expect(isSpotFocus(profile.id)).toBe(false)
+  })
+
+  it.each(spots)('reads $id as a spot once wrapped', (spot) => {
+    const focus = spotFocus(spot.id)
+
+    expect(isSpotFocus(focus)).toBe(true)
+    expect(isReadFocus(focus)).toBe(false)
+    expect(focusSpotId(focus)).toBe(spot.id)
+  })
+
+  it('keeps the three axes of the flat focus type from colliding', () => {
+    const taken = new Set<string>(['all', ...streets, ...opponentProfiles.map((p) => p.id)])
+
+    for (const focus of spotFocuses) {
+      expect(taken.has(focus), `${focus} collides with another focus`).toBe(false)
+    }
+  })
+
+  it('offers a focus for every authored spot, and nothing it does not', () => {
+    expect(spotFocuses).toEqual(spots.map((spot) => spotFocus(spot.id)))
+  })
+})
+
+describe('summarizeSpots', () => {
+  const blankGrid = buildCoverage([])
+
+  it('returns one row per authored spot, in street order', () => {
+    const progress = summarizeSpots(blankGrid)
+
+    expect(progress.map((entry) => entry.spot.id)).toEqual(spots.map((spot) => spot.id))
+  })
+
+  it('gives every spot a row of one pairing per read', () => {
+    for (const entry of summarizeSpots(blankGrid)) {
+      expect(entry.total, `${entry.spot.id} is not a full row`).toBe(opponentProfiles.length)
+      expect(entry.untested).toBe(opponentProfiles.length)
+    }
+  })
+
+  it('agrees with the street split on the totals, being the same grid', () => {
+    const coverage = buildCoverage(reviewSession(proveFully(allPairings[0])))
+    const bySpot = summarizeSpots(coverage).reduce((sum, entry) => sum + entry.total, 0)
+    const byStreet = summarizeStreets(coverage).reduce((sum, entry) => sum + entry.total, 0)
+
+    expect(bySpot).toBe(byStreet)
+  })
+
+  it('counts a proven pairing against its own spot and no other', () => {
+    const proven = allPairings[0]
+    const coverage = buildCoverage(reviewSession(proveFully(proven)))
+
+    for (const entry of summarizeSpots(coverage)) {
+      expect(entry.mastered, `${entry.spot.id}`).toBe(entry.spot.id === proven.spot.id ? 1 : 0)
+    }
+  })
+
+  it('separates spots a street split pools together', () => {
+    const [first, second] = spots.filter((spot) => spot.street === spots[0].street)
+    // Two spots on the same street: one fully proven, the other never played.
+    const coverage = buildCoverage(
+      reviewSession(
+        allPairings
+          .filter((pairing) => pairing.spot.id === first.id)
+          .flatMap(proveFully),
+      ),
+    )
+    const bySpot = new Map(summarizeSpots(coverage).map((entry) => [entry.spot.id, entry]))
+
+    expect(bySpot.get(first.id)!.percentMastered).toBe(100)
+    expect(bySpot.get(second.id)!.percentMastered).toBe(0)
+    // The street they share averages the two, which is the thing it hides.
+    expect(
+      summarizeStreets(coverage).find((entry) => entry.street === first.street)!.percentMastered,
+    ).toBeLessThan(100)
+  })
+})
+
+describe('spot-focused drills', () => {
+  const blankGrid = buildCoverage([])
+
+  it.each(spots)('deals only $id when focused on it', (spot) => {
+    for (const seed of [1, 88, 2026]) {
+      const dealt = buildCoverageDrill(blankGrid, seed, spotFocus(spot.id))
+
+      expect(dealt.length, `${spot.id} dealt nothing on seed ${seed}`).toBeGreaterThan(0)
+      for (const hand of dealt) {
+        expect(hand.spot.id).toBe(spot.id)
+      }
+    }
+  })
+
+  it('deals a full drill of every read, because a row is exactly that long', () => {
+    expect(opponentProfiles).toHaveLength(DRILL_LENGTH)
+
+    for (const spot of spots) {
+      const dealt = buildCoverageDrill(blankGrid, 5, spotFocus(spot.id))
+
+      expect(dealt).toHaveLength(DRILL_LENGTH)
+      expect(new Set(dealt.map((hand) => hand.opponentId)).size).toBe(opponentProfiles.length)
+    }
+  })
+
+  it('holds the board still, which is what makes it a different drill', () => {
+    const dealt = buildCoverageDrill(blankGrid, 7, spotFocus(spots[0].id))
+
+    expect(new Set(dealt.map((hand) => hand.spot.street)).size).toBe(1)
+  })
+
+  it('is reproducible from its seed', () => {
+    const focus = spotFocus(spots[1].id)
+
+    expect(buildCoverageDrill(blankGrid, 23, focus).map(pairingKey)).toEqual(
+      buildCoverageDrill(blankGrid, 23, focus).map(pairingKey),
+    )
+  })
+
+  it('deals the unproven pairings of that spot first', () => {
+    const spot = spots[0]
+    const against = allPairings.filter((pairing) => pairing.spot.id === spot.id)
+    const [leaked, ...rest] = against
+    // Everything else in the row is proven, and so is every other row -- so
+    // only the focus can put this leak at the front of the deal.
+    const elsewhere = allPairings.filter((pairing) => pairing.spot.id !== spot.id)
+    const coverage = buildCoverage(
+      reviewSession([
+        gradeBadly(leaked),
+        ...rest.flatMap(proveFully),
+        ...elsewhere.flatMap(proveFully),
+      ]),
+    )
+
+    expect(summarizeCoverage(coverage).untested).toBe(0)
+    expect(buildCoverageDrill(coverage, 3, spotFocus(spot.id)).map(pairingKey)[0]).toBe(
+      pairingKey(leaked),
+    )
+  })
+
+  it('narrows a confirm run to one spot', () => {
+    const spot = spots[0]
+    const here = allPairings.find((pairing) => pairing.spot.id === spot.id)!
+    const elsewhere = allPairings.find((pairing) => pairing.spot.id !== spot.id)!
+    const coverage = buildCoverage(
+      reviewSession([gradeOptimally(here), gradeOptimally(elsewhere)]),
+    )
+
+    expect(buildConfirmDrill(coverage)).toHaveLength(2)
+    expect(buildConfirmDrill(coverage, spotFocus(spot.id)).map(pairingKey)).toEqual([
+      pairingKey(here),
+    ])
+  })
+
+  it('narrows a review run to one spot', () => {
+    const spot = spots[0]
+    const here = allPairings.find((pairing) => pairing.spot.id === spot.id)!
+    const elsewhere = allPairings.find((pairing) => pairing.spot.id !== spot.id)!
+    const rows = [
+      ...rowsAnsweredDaysAgo(proveFully(here), MASTERY_FRESH_DAYS + 1),
+      ...rowsAnsweredDaysAgo(proveFully(elsewhere), MASTERY_FRESH_DAYS + 1),
+    ]
+    const coverage = buildCoverage(rows, NOW)
+
+    expect(buildRefreshDrill(coverage)).toHaveLength(2)
+    expect(buildRefreshDrill(coverage, spotFocus(spot.id)).map(pairingKey)).toEqual([
+      pairingKey(here),
+    ])
+  })
+
+  it('deals nothing for a spot id no deploy authors', () => {
+    expect(buildCoverageDrill(blankGrid, 1, spotFocus('no-such-spot'))).toEqual([])
+    expect(buildConfirmDrill(blankGrid, spotFocus('no-such-spot'))).toEqual([])
   })
 })
 
