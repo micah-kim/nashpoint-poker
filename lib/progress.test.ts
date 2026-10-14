@@ -411,6 +411,48 @@ describe('summarizeCareer', () => {
     }
   })
 
+  it('splits the lifetime grid by spot without disagreeing with the whole', () => {
+    const career = summarizeCareer(
+      historyOf(
+        session([gradeAnswer(riverSpot, 'tag', 'call')]),
+        session([bestAnswer(cbetSpot, 'fish')], 'drill'),
+      ),
+    )
+    const sum = (pick: (entry: CareerSummary['spotProgress'][number]) => number) =>
+      career.spotProgress.reduce((total, entry) => total + pick(entry), 0)
+
+    expect(career.spotProgress.length).toBeGreaterThan(1)
+    expect(sum((entry) => entry.total)).toBe(career.coverage.length)
+    expect(sum((entry) => entry.mastered)).toBe(career.coverageStats.mastered)
+    expect(sum((entry) => entry.learning)).toBe(career.coverageStats.learning)
+    expect(sum((entry) => entry.open)).toBe(career.coverageStats.open)
+  })
+
+  it('credits each spot with only the pairings played in it', () => {
+    const career = summarizeCareer(
+      historyOf(session([bestAnswer(riverSpot, 'fish'), bestAnswer(riverSpot, 'fish')])),
+    )
+    const inSpot = (spotId: string) =>
+      career.spotProgress.find((entry) => entry.spot.id === spotId)!
+
+    expect(inSpot(riverSpot.id).mastered).toBe(1)
+    expect(inSpot(cbetSpot.id).mastered).toBe(0)
+    expect(inSpot(cbetSpot.id).untested).toBe(inSpot(cbetSpot.id).total)
+  })
+
+  it('ages a proven spot with the same clock the grid uses', () => {
+    const provenAt = 1_700_000_000_000
+    const career = summarizeCareer(
+      historyOf(
+        session([bestAnswer(riverSpot, 'fish'), bestAnswer(riverSpot, 'fish')], 'drill', provenAt),
+      ),
+      provenAt + (MASTERY_FRESH_DAYS + 1) * DAY_MS,
+    )
+    const inRiverSpot = career.spotProgress.find((entry) => entry.spot.id === riverSpot.id)!
+
+    expect(inRiverSpot).toMatchObject({ stale: 1, mastered: 0 })
+  })
+
   it('ages a proven read with the same clock the grid uses', () => {
     const provenAt = 1_700_000_000_000
     const career = summarizeCareer(

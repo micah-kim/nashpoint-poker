@@ -119,7 +119,7 @@ nashpoint-poker/
 - Interactive spot trainer, rendered by `components/DemoContent.tsx`
 - Seven hand-authored spots across all four streets and five opponent profiles (`lib/spots.ts`), each spot's actions authored most passive to most aggressive
 - Five modes: pick the read yourself, take a dealt drill of up to five spot/read pairings drawn from the gaps in your coverage (`buildCoverageDrill`), drill the leaks still open from earlier visits, confirm the pairings you have answered right exactly once (`buildConfirmDrill`), or review the lines whose proof has expired (`buildRefreshDrill`)
-- A drill can be aimed down either axis of the grid -- one street or one opponent read, never both at once -- and deals only that slice's pairings (`DrillFocus`, `matchesFocus`)
+- A drill can be aimed at one slice of the grid -- one street, one opponent read, or one spot taken against every read -- never two at once, and deals only that slice's pairings (`DrillFocus`, `matchesFocus`)
 - Answers are graded client-side against the EV table (`lib/trainer.ts`)
 - GTO baseline chart, exploitative adjustment panel, and end-of-session summary
 - Session recap replays every graded spot with its biggest leak (`reviewSession`, `findBiggestLeak`)
@@ -128,7 +128,7 @@ nashpoint-poker/
 - Finished sessions are kept in `localStorage` so a returning visitor still has their leaks (`lib/progress.ts`)
 - The career card shows lifetime accuracy, the read that costs the most, leaks closed, and the leaks still open (`summarizeCareer`, `summarizeLeakProgress`)
 - A recent-form panel keeps the stored sessions apart: a rolling trend over the last `FORM_WINDOW_SESSIONS` sessions against the window before them, then one row per session newest first with its drill, accuracy bar, EV lost, and how long ago it was (`summarizeForm`). Lifetime accuracy averages over a history that only grows, so this is the only readout that can show improvement
-- The coverage grid shows every spot/read pairing as untested, open, stale, learning, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`)
+- The coverage grid shows every spot/read pairing as untested, open, stale, learning, or mastered, which is also the order drills deal in (`buildCoverage`, `summarizeCoverage`). Each row's spot name is the button that deals that row: one spot against all five reads, which is exactly `DRILL_LENGTH` hands (`summarizeSpots`, `spotFocus`)
 - Mastery takes `MASTERY_REPS` consecutive optimal answers; a pairing clean once but not twice sits in `learning`, which is what the confirm drill deals
 - Mastery also expires: a pairing goes `stale` once it has gone unplayed for the window its streak earned (`MASTERY_FRESH_DAYS`, doubling per extra clean rep up to `MASTERY_FRESH_CAP_DAYS`), which is what the review drill deals. Rows are dated from the session that graded them, so only a stored history ages
 - A "Next up" banner names the one queue worth clearing -- unseen, open, expired, or a rep short -- and starts the drill that empties it, so five mode buttons collapse to one recommendation (`planNextSession`)

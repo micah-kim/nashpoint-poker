@@ -54,6 +54,12 @@ export interface OpponentRead {
 export interface Spot {
   id: string
   title: string
+  /**
+   * A few words naming the same spot, for places too narrow for the title:
+   * the focus chips and the drill header. The opponent profiles carry a
+   * `shortLabel` for the same reason.
+   */
+  shortTitle: string
   street: Street
   position: string
   potType: string
@@ -108,6 +114,7 @@ export const spots: Spot[] = [
   {
     id: 'btn-3bet-aqo',
     title: 'AQo on the button vs a UTG open',
+    shortTitle: 'AQo vs UTG open',
     street: 'Preflop',
     position: 'BTN',
     potType: 'Open-raised pot',
@@ -161,6 +168,7 @@ export const spots: Spot[] = [
   {
     id: 'bb-defend-k9s',
     title: 'K9 suited in the big blind vs a button steal',
+    shortTitle: 'K9s BB defence',
     street: 'Preflop',
     position: 'BB',
     potType: 'Open-raised pot',
@@ -216,6 +224,7 @@ export const spots: Spot[] = [
   {
     id: 'btn-cbet-tptk',
     title: 'Top pair, top kicker on a king-high board',
+    shortTitle: 'TPTK c-bet',
     street: 'Flop',
     position: 'BTN',
     potType: 'Single-raised pot',
@@ -269,6 +278,7 @@ export const spots: Spot[] = [
   {
     id: 'bb-flop-raise-draw',
     title: 'Open-ender facing a small c-bet',
+    shortTitle: 'Open-ender vs c-bet',
     street: 'Flop',
     position: 'BB',
     potType: 'Single-raised pot',
@@ -324,6 +334,7 @@ export const spots: Spot[] = [
   {
     id: 'btn-turn-barrel-draw',
     title: 'Flush draw on the turn after a called c-bet',
+    shortTitle: 'Turn flush draw',
     street: 'Turn',
     position: 'BTN',
     potType: 'Single-raised pot',
@@ -379,6 +390,7 @@ export const spots: Spot[] = [
   {
     id: 'bb-river-bluffcatch',
     title: 'Second pair facing a river bet',
+    shortTitle: 'River bluffcatch',
     street: 'River',
     position: 'BB',
     potType: 'Single-raised pot',
@@ -431,6 +443,7 @@ export const spots: Spot[] = [
   {
     id: 'btn-river-bluff-ace-high',
     title: 'Busted flush draw on the river',
+    shortTitle: 'River busted draw',
     street: 'River',
     position: 'BTN',
     potType: 'Single-raised pot',

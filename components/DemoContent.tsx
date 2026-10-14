@@ -25,14 +25,19 @@ import {
   buildTendencyDrill,
   drillFocuses,
   findBiggestLeak,
+  focusSpotId,
   getOpponentProfile,
   getRecommendation,
+  getSpot,
   gradeAnswer,
   isReadFocus,
+  isSpotFocus,
   missDirection,
   planNextSession,
   readFocuses,
   reviewSession,
+  spotFocus,
+  spotFocuses,
   summarizeByOpponent,
   summarizeSession,
   type CoverageCell,
@@ -46,6 +51,7 @@ import {
   type ReadProgress,
   type ReviewRow,
   type SessionKind,
+  type SpotProgress,
   type StreetProgress,
   type StreetTendency,
   type TendencyDirection,
@@ -138,11 +144,19 @@ function formatDaysAgo(daysAgo: number | null): string | null {
 /**
  * How a live focus names itself in the UI.
  *
- * A street focus is already its own label; a read focus is an opponent id, so
- * it has to be resolved back to the profile a visitor recognises.
+ * A street focus is already its own label; a read focus is an opponent id and
+ * a spot focus a prefixed spot id, so both have to be resolved back to the
+ * name a visitor recognises. A spot id with no spot behind it can only come
+ * from a deploy that dropped the spot, so it falls back to the id rather than
+ * throwing on a label.
  */
 function focusLabel(focus: DrillFocus): string {
   if (focus === 'all') return demoContent.focusAllLabel
+  if (isSpotFocus(focus)) {
+    const spotId = focusSpotId(focus)
+
+    return getSpot(spotId)?.title ?? spotId
+  }
 
   return isReadFocus(focus) ? getOpponentProfile(focus).label : focus
 }
@@ -477,6 +491,7 @@ export default function DemoContent() {
               activeFocus={activeFocus}
               streetProgress={careerSummary.streetProgress}
               readProgress={careerSummary.readProgress}
+              spotProgress={careerSummary.spotProgress}
               coverageStats={careerSummary.coverageStats}
               onSelect={startDrill}
             />
@@ -486,9 +501,11 @@ export default function DemoContent() {
             {activeFocus && activeFocus !== 'all' && (
               <p className="text-xs text-brand-accent mt-1">
                 {focusLabel(activeFocus)}{' '}
-                {isReadFocus(activeFocus)
-                  ? demoContent.readFocusActiveNote
-                  : demoContent.focusActiveNote}
+                {isSpotFocus(activeFocus)
+                  ? demoContent.spotFocusActiveNote
+                  : isReadFocus(activeFocus)
+                    ? demoContent.readFocusActiveNote
+                    : demoContent.focusActiveNote}
               </p>
             )}
             {careerSummary.sessions > 0 && (
@@ -1049,6 +1066,7 @@ function CareerPanel({
         refreshHands={refreshHands}
         onConfirm={onConfirm}
         onRefresh={onRefresh}
+        onDrillSpot={onDrillFocus}
       />
 
       <StreetProgressPanel streetProgress={career.streetProgress} />
@@ -1099,6 +1117,8 @@ interface CoverageGridProps {
   refreshHands: DealtHand[]
   onConfirm: () => void
   onRefresh: () => void
+  /** Deals one row of the grid: that spot against every read. */
+  onDrillSpot: (focus: DrillFocus) => void
 }
 
 const coverageStyles: Record<CoverageStatus, { swatch: string; label: string }> = {
@@ -1153,6 +1173,10 @@ function groupCoverageBySpot(coverage: CoverageCell[]): CoverageCell[][] {
  * The open-leak list says what a visitor got wrong; this says what they have
  * not answered at all, which is the thing a session recap could never show. It
  * is also the order drill mode now deals in, so the gaps double as a plan.
+ *
+ * Each row's spot name deals that row: `opponentProfiles.length` pairings,
+ * which is exactly `DRILL_LENGTH`, so a row a visitor can see is red is also a
+ * row they can clear in one full drill without leaving the recap.
  */
 function CoverageGrid({
   coverage,
@@ -1161,6 +1185,7 @@ function CoverageGrid({
   refreshHands,
   onConfirm,
   onRefresh,
+  onDrillSpot,
 }: CoverageGridProps) {
   const rows = useMemo(() => groupCoverageBySpot(coverage), [coverage])
   const counts: Record<CoverageStatus, number> = {
@@ -1213,24 +1238,39 @@ function CoverageGrid({
             </tr>
           </thead>
           <tbody>
-            {rows.map((cells) => (
-              <tr key={cells[0].spot.id}>
-                <th scope="row" className="text-left font-normal">
-                  <span
-                    className="block max-w-[5rem] sm:max-w-[14rem] truncate text-brand-text-primary"
-                    title={cells[0].spot.title}
-                  >
-                    {cells[0].spot.title}
-                  </span>
-                  <span className="block text-brand-text-secondary">{cells[0].spot.street}</span>
-                </th>
-                {cells.map((cell) => (
-                  <td key={cell.opponent.id} className="p-0">
-                    <CoverageCellBox cell={cell} />
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {rows.map((cells) => {
+              const spot = cells[0].spot
+              const proven = cells.filter((cell) => cell.status === 'mastered').length
+
+              return (
+                <tr key={spot.id}>
+                  <th scope="row" className="text-left font-normal">
+                    <button
+                      type="button"
+                      onClick={() => onDrillSpot(spotFocus(spot.id))}
+                      title={spot.title}
+                      aria-label={`${demoContent.spotFocusDrillLabel} ${spot.title}: ${proven} of ${cells.length} pairings proven`}
+                      className="group block w-full text-left rounded px-1 py-0.5 transition-colors duration-200 hover:bg-brand-accent/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                    >
+                      <span className="block max-w-[5rem] sm:max-w-[14rem] truncate text-brand-text-primary underline decoration-dotted decoration-brand-text-secondary/50 underline-offset-2 group-hover:text-brand-accent group-hover:decoration-brand-accent">
+                        {spot.title}
+                      </span>
+                      <span className="block text-brand-text-secondary">
+                        {spot.street}{' '}
+                        <span className="tabular-nums">
+                          {proven}/{cells.length}
+                        </span>
+                      </span>
+                    </button>
+                  </th>
+                  {cells.map((cell) => (
+                    <td key={cell.opponent.id} className="p-0">
+                      <CoverageCellBox cell={cell} />
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -1255,6 +1295,7 @@ function CoverageGrid({
       <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageMasteryNote}</p>
       <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageStaleNote}</p>
       <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageDeviationNote}</p>
+      <p className="text-xs text-brand-text-secondary mt-1">{demoContent.coverageRowCtaHint}</p>
 
       {confirmHands.length > 0 && (
         <>
@@ -1557,9 +1598,17 @@ function FocusRow({ heading, hint, options, counts, activeFocus, onSelect }: Foc
   )
 }
 
-/** Chips are narrow, so a read wears its short label and a street its name. */
+/**
+ * Chips are narrow, so a read wears its short label, a spot its `shortTitle`,
+ * and a street its name.
+ */
 function focusChipLabel(focus: DrillFocus): string {
   if (focus === 'all') return demoContent.focusAllLabel
+  if (isSpotFocus(focus)) {
+    const spotId = focusSpotId(focus)
+
+    return getSpot(spotId)?.shortTitle ?? spotId
+  }
 
   return isReadFocus(focus) ? getOpponentProfile(focus).shortLabel : focus
 }
@@ -1569,28 +1618,31 @@ interface FocusPickerProps {
   activeFocus: DrillFocus | null
   streetProgress: StreetProgress[]
   readProgress: ReadProgress[]
+  spotProgress: SpotProgress[]
   coverageStats: CoverageSummary
   onSelect: (focus: DrillFocus) => void
 }
 
 /**
- * Aims a drill at one street or one read, dealing immediately on click.
+ * Aims a drill at one street, one read or one spot, dealing on click.
  *
- * Two rows because the grid has two axes, and a drill is aimed down one of
- * them at a time -- picking a read clears a street and the other way round.
- * See `DrillFocus`: a street and a read intersect in too few pairings to fill
- * a drill, so the picker never offers the intersection.
+ * Three rows for three ways of slicing the same grid, and a drill is aimed
+ * down one of them at a time -- picking a read clears a street, and picking a
+ * spot clears both. See `DrillFocus`: a street and a read intersect in too few
+ * pairings to fill a drill, so the picker never offers the intersection, while
+ * a spot row is a whole row of the grid and fills one exactly.
  *
  * The counter on each chip is that slice's proven pairings, so the picker is
- * also the only place the per-street and per-read gaps show up before a visitor
- * has finished a session and opened the recap. Streets with no authored spots
- * and reads with no pairings never reach the summaries, so they are never
- * offered.
+ * also the only place the per-street, per-read and per-spot gaps show up
+ * before a visitor has finished a session and opened the recap. Streets with
+ * no authored spots, reads with no pairings and spots with no pairings never
+ * reach the summaries, so they are never offered.
  */
 function FocusPicker({
   activeFocus,
   streetProgress,
   readProgress,
+  spotProgress,
   coverageStats,
   onSelect,
 }: FocusPickerProps) {
@@ -1619,6 +1671,19 @@ function FocusPicker({
     return byFocus
   }, [readProgress])
 
+  const spotCounts = useMemo(() => {
+    const byFocus = new Map<DrillFocus, FocusCount>()
+
+    for (const progress of spotProgress) {
+      byFocus.set(spotFocus(progress.spot.id), {
+        mastered: progress.mastered,
+        total: progress.total,
+      })
+    }
+
+    return byFocus
+  }, [spotProgress])
+
   return (
     <>
       <FocusRow
@@ -1634,6 +1699,14 @@ function FocusPicker({
         hint={demoContent.readFocusHint}
         options={readFocuses}
         counts={readCounts}
+        activeFocus={activeFocus}
+        onSelect={onSelect}
+      />
+      <FocusRow
+        heading={demoContent.spotFocusHeading}
+        hint={demoContent.spotFocusHint}
+        options={spotFocuses}
+        counts={spotCounts}
         activeFocus={activeFocus}
         onSelect={onSelect}
       />

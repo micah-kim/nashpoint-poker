@@ -22,6 +22,7 @@ import {
   summarizeLeakProgress,
   summarizeReads,
   summarizeSession,
+  summarizeSpots,
   summarizeStreets,
   summarizeTendency,
   type CoverageCell,
@@ -31,6 +32,7 @@ import {
   type ReadProgress,
   type ReviewRow,
   type SessionKind,
+  type SpotProgress,
   type StreetProgress,
   type TendencySummary,
   type Verdict,
@@ -216,6 +218,15 @@ export interface CareerSummary {
    */
   readProgress: ReadProgress[]
   /**
+   * The same grid split one row at a time, in authored street order.
+   *
+   * The slice a street split and a read split both average away: a spot's five
+   * pairings differ by nothing but the opponent, so a row that is red against
+   * three reads and green against two is not a street problem or a read
+   * problem, it is that one spot's exploit being misread.
+   */
+  spotProgress: SpotProgress[]
+  /**
    * Which way every wrong answer ever given missed, over all grades rather
    * than the latest attempt at each pairing: a habit is a history, so closing
    * a leak does not erase the fact that folding is how you got there.
@@ -363,6 +374,7 @@ export function summarizeCareer(history: TrainingHistory, now?: number): CareerS
     coverageStats: summarizeCoverage(coverage),
     streetProgress: summarizeStreets(coverage),
     readProgress: summarizeReads(coverage),
+    spotProgress: summarizeSpots(coverage),
     tendency: summarizeTendency(rows),
     form: summarizeForm(history, now),
   }

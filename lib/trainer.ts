@@ -594,22 +594,34 @@ export function summarizeCoverage(coverage: CoverageCell[]): CoverageSummary {
 }
 
 /**
+ * A drill aimed at one authored spot, played against every read in turn.
+ *
+ * Prefixed rather than bare so the flat focus type stays discriminable: a spot
+ * id is an arbitrary string, and `Street | OpponentId | string` collapses to
+ * `string`, which would lose the other two axes at the type level and leave
+ * `isReadFocus` guessing. The prefix also makes a collision with a street name
+ * or an opponent id impossible by construction rather than by convention.
+ */
+export type SpotFocus = `spot:${string}`
+
+/**
  * Which slice of the grid a drill is aimed at: one street, one opponent read,
- * or 'all' for the whole grid.
+ * one spot, or 'all' for the whole grid.
  *
  * Lives here rather than in the page because it is the only thing that changes
  * which pairings a drill can deal.
  *
- * The grid has two axes and a drill can be aimed down either one, but never
- * both at once. A street and a read intersect in only as many pairings as that
+ * The grid has two axes and a drill is aimed down one of them at a time, never
+ * two at once. A street and a read intersect in only as many pairings as that
  * street has spots -- fewer than `DRILL_LENGTH` -- so an intersection drill
- * would deal the same two or three hands back every time. One axis at a time
+ * would deal the same two or three hands back every time. One slice at a time
  * keeps a focused drill a full drill.
  *
- * Street names and opponent ids cannot collide, so both axes share one flat
- * type and a focus stays one click deep.
+ * A spot focus is a slice of the grid's rows rather than a third dimension: it
+ * takes one row whole, which is exactly `opponentProfiles.length` pairings, so
+ * unlike an intersection it still fills a drill.
  */
-export type DrillFocus = Street | OpponentId | 'all'
+export type DrillFocus = Street | OpponentId | SpotFocus | 'all'
 
 /** Street focuses a visitor can pick, whole grid first then street by street. */
 export const drillFocuses: DrillFocus[] = ['all', ...streets]
@@ -617,12 +629,30 @@ export const drillFocuses: DrillFocus[] = ['all', ...streets]
 /** Read focuses a visitor can pick, in the order the profiles are authored. */
 export const readFocuses: DrillFocus[] = opponentProfiles.map((profile) => profile.id)
 
-/** Street names, for telling the two axes of a flat focus apart. */
+/** Spot focuses a visitor can pick, in authored street order. */
+export const spotFocuses: SpotFocus[] = spots.map((spot) => spotFocus(spot.id))
+
+/** Street names, for telling the axes of a flat focus apart. */
 const streetNames = new Set<string>(streets)
 
-/** True when a focus names an opponent read rather than a street or the grid. */
+/** Wraps a spot id into the focus that drills it against every read. */
+export function spotFocus(spotId: string): SpotFocus {
+  return `spot:${spotId}`
+}
+
+/** True when a focus names one authored spot rather than a street or a read. */
+export function isSpotFocus(focus: DrillFocus): focus is SpotFocus {
+  return focus.startsWith('spot:')
+}
+
+/** The spot id inside a spot focus. */
+export function focusSpotId(focus: SpotFocus): string {
+  return focus.slice('spot:'.length)
+}
+
+/** True when a focus names an opponent read rather than a street, spot or grid. */
 export function isReadFocus(focus: DrillFocus): focus is OpponentId {
-  return focus !== 'all' && !streetNames.has(focus)
+  return focus !== 'all' && !streetNames.has(focus) && !isSpotFocus(focus)
 }
 
 /**
@@ -634,6 +664,7 @@ export function isReadFocus(focus: DrillFocus): focus is OpponentId {
  */
 function matchesFocus(cell: CoverageCell, focus: DrillFocus): boolean {
   if (focus === 'all') return true
+  if (isSpotFocus(focus)) return cell.spot.id === focusSpotId(focus)
   if (isReadFocus(focus)) return cell.opponent.id === focus
 
   return cell.spot.street === focus
@@ -647,6 +678,11 @@ export interface StreetProgress extends CoverageSummary {
 /** How much of one read's pairings a visitor has seen and proven. */
 export interface ReadProgress extends CoverageSummary {
   opponent: OpponentProfile
+}
+
+/** How much of one spot's row of the grid a visitor has seen and proven. */
+export interface SpotProgress extends CoverageSummary {
+  spot: Spot
 }
 
 /**
@@ -688,6 +724,27 @@ export function summarizeReads(coverage: CoverageCell[]): ReadProgress[] {
 }
 
 /**
+ * Splits the same coverage grid by spot, one row of the grid each.
+ *
+ * The third slice, and the only one whose pairings differ by nothing but the
+ * read. A street split says which part of a hand is weak and a read split says
+ * which opponent is beating you; neither can say that one authored spot is the
+ * one you keep getting wrong, because each of them pools seven spots or five
+ * reads together.
+ *
+ * Returned in authored street order, so it reads preflop through river the
+ * same way the coverage grid's rows do.
+ */
+export function summarizeSpots(coverage: CoverageCell[]): SpotProgress[] {
+  return spots
+    .map((spot) => ({
+      spot,
+      ...summarizeCoverage(coverage.filter((cell) => cell.spot.id === spot.id)),
+    }))
+    .filter((progress) => progress.total > 0)
+}
+
+/**
  * Deal order for a coverage drill: unseen first, then unsolved, then the ones
  * whose proof has expired, then the ones sitting on a single clean rep, then
  * the ones still proven.
@@ -722,11 +779,11 @@ const coveragePriority: Record<CoverageStatus, number> = {
  * that is where the answer moves. With no history every cell is untested, so
  * this degrades to a plain shuffle of the whole grid.
  *
- * A `focus` narrows the deal to one street or one read first. A focus with
- * fewer than `DRILL_LENGTH` pairings simply deals a shorter drill rather than
- * padding itself out with pairings from elsewhere -- a turn drill that quietly
- * hands you a preflop spot is not a turn drill, and a fish drill that hands you
- * a LAG spot is not a fish drill.
+ * A `focus` narrows the deal to one street, one read or one spot first. A
+ * focus with fewer than `DRILL_LENGTH` pairings simply deals a shorter drill
+ * rather than padding itself out with pairings from elsewhere -- a turn drill
+ * that quietly hands you a preflop spot is not a turn drill, and a fish drill
+ * that hands you a LAG spot is not a fish drill.
  */
 export function buildCoverageDrill(
   coverage: CoverageCell[],
@@ -753,8 +810,8 @@ export function buildCoverageDrill(
  *
  * Deals in authored grid order, so a confirm run reads preflop through river,
  * and takes no seed: there is nothing to randomise when the whole shortlist
- * gets dealt. A `focus` narrows it to one street or one read, the same way a
- * drill does.
+ * gets dealt. A `focus` narrows it to one street, read or spot, the same way
+ * a drill does.
  */
 export function buildConfirmDrill(
   coverage: CoverageCell[],
@@ -781,7 +838,7 @@ export function buildConfirmDrill(
  * authored grid order, so a run dealt from one session's worth of stale
  * pairings still reads preflop through river. Takes no seed -- there is
  * nothing to randomise when the queue has its own priority -- and a `focus`
- * narrows it to one street or one read, the same way a drill does.
+ * narrows it to one street, read or spot, the same way a drill does.
  */
 export function buildRefreshDrill(
   coverage: CoverageCell[],
